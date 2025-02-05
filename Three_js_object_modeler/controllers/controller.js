@@ -12,7 +12,7 @@ import * as THREE from 'three'
 import { pointsMaterial } from '../materials/materials';
 import { Vector2 } from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { ExactNumber as N } from 'exactnumber/dist/index.umd';
+import { ExactNumber, ExactNumber as N } from 'exactnumber/dist/index.umd';
 
 import * as ExactMathUtils from '../utils/exactMathUtils';
 import { ExactMatrix } from '../utils/exactMatrix';
@@ -21,6 +21,7 @@ class Controller{
     static epsilon = N(0);
     static maxId = 0;
     static snapSize = 2;
+    static nb_fail_reset_tree = 0; 
     constructor(faceData, pointData, halfEdgeData, edgeData, LoD, material, isCopy=false, isDual=false){
         this.id=Controller.maxId;
         Controller.maxId++;
@@ -313,8 +314,13 @@ class Controller{
             }
             else{
                 //if(!this.checkAutoIntersection(faceId, delta_final)){
+                    let t0 = this.faceData.planeEquation[faceId][3].sub(this.faceData.planeEquation[faceId][3]);
+                    let t1;
+                    if(encounteredEvent){
+                        t1 = this.faceData.planeEquation[faceId][3].sub(encounteredEvent.t);
+                    }
                     this.faceData.planeEquation[faceId][3] = this.faceData.planeEquation[faceId][3].sub(delta_final);
-                    this.resetExactNumbersTree(faceId);
+                    this.resetExactNumbersTree(faceId, t0,t1);
                 //}
                 //else{
                     //this.delta_final = N(0);
@@ -1966,16 +1972,29 @@ class Controller{
      * Mak a conversion ExactNumber -> Float -> ExactNumber 
      * to empty the calculation tree;
      */
-    resetExactNumbersTree(faceId){
+    resetExactNumbersTree(faceId,d0,d1){
+
         let [a,b,c,d] = this.faceData.planeEquation[faceId];
-        /*a = a.toNumber();
-        b = b.toNumber();
-        c = c.toNumber();*/
-        d = d.toNumber();
-        /*this.faceData.planEquation[faceId][0]=N(String(a));
-        this.faceData.planEquation[faceId][1]=N(String(b));
-        this.faceData.planEquation[faceId][2]=N(String(c));*/
-        this.faceData.planeEquation[faceId][3]=N(String(d));
+
+        let d_float = d.toNumber();
+
+        let d0_not_crossed = (d0.lt(d) == d0.lt(N(String(d_float))));
+        let d1_not_crossed = true;
+        if(d1){
+            d1_not_crossed = (d1.lt(d) == d1.lt(N(String(d_float))));
+        }
+
+
+
+        
+        if(d0_not_crossed && d1_not_crossed){
+            this.faceData.planeEquation[faceId][3]=N(String(d_float));
+        }
+        else{
+            Controller.nb_fail_reset_tree+=1;
+            console.log("Fail to reset tree number",  Controller.nb_fail_reset_tree);
+            console.log(d0.toNumber(), d_float, d1);
+        }
     }
 
     /**
