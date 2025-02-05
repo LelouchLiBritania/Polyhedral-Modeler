@@ -167,13 +167,14 @@ class HalfEdgeData{
 }
 
 class EdgeData{
-    constructor(heIndex, supportPlanEquation= new Array(heIndex.length)){
+    constructor(heIndex, supportPlanEquation= new Array(heIndex.length), underconstrained = new Array(heIndex.length).fill(false)){
         this.heIndex = heIndex;
         this.count = this.heIndex.length;
         this.selectedEdge = -1;
         this.embeddedPlanEquation = new Array(this.count);
         this.flipable = new Array(this.count).fill(false);
         this.supportPlanEquation = supportPlanEquation;
+        this.underconstrained = underconstrained;
     }
     changeSelectedEdge(newEdgeIndex, material){
         this.selectedEdge = newEdgeIndex;
@@ -185,6 +186,7 @@ class EdgeData{
         this.embeddedPlanEquation.push(embeddedPlanEquation);
         this.supportPlanEquation.push(null);
         this.flipable.push(false);
+        this.underconstrained.push(false);
         this.count+=1;
     }
     delete(e_id){
@@ -197,6 +199,7 @@ class EdgeData{
         let copy = new EdgeData([...this.heIndex]);
         for (let i=0; i<this.count; i++){
             copy.embeddedPlanEquation[i]=[...this.embeddedPlanEquation[i]];
+            copy.underconstrained[i] = this.underconstrained[i];
         }
         for (let i=0; i<this.count; i++){
             if(this.supportPlanEquation[i]){

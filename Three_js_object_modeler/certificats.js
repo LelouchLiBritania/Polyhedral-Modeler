@@ -46,10 +46,14 @@ function pointsWellDefined(geometricalController, faceId){
     for(let i=0; i<points.length; i++){
         let p=points[i];
         let faces = geometricalController.findAdjacentFaces(p);
+        let supportEdges = geometricalController.findSupportAdjacentFaces(p);
         let plans = [];
 
         faces.forEach(f=>{
             plans.push(geometricalController.faceData.planeEquation[f]);
+        })
+        supportEdges.forEach(e=>{
+            plans.push(geometricalController.edgeData.supportPlanEquation[e]);
         })
 
         let coords = GeomUtils.computeIntersectionPoint(...plans);

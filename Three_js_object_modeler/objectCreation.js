@@ -295,6 +295,44 @@ let houses_noised = {
     ]
 }
 
+//Maison avec erreurs2
+
+let house_noised2 = {
+    'points':[
+        [-5, 5 ,  5],//0
+        [ 5, 5 ,  5],//1
+        [-5, 5 , -5],//2
+        [ 5, 5 , -5],//3
+
+        [-5, 7.5 ,  5],//4
+        [ 5, 7.5 , -5],//5
+
+        [-5, 10,  4],//6
+        [ 5, 10,  5],//7
+        [-5, 10, -5],//8
+        [ 5, 10, -4],//9
+        [-3, 11,  0],//10
+        [ 3, 12, -0]//11
+    ],
+    'faces':[
+        [[0,1,3,2],[]],
+        [[1,0,4,7],[]],
+        [[1,7,9,5,3],[]],
+        [[2,3,5,8],[]],
+        [[0,2,8,6,4],[]],
+        [[4,6,10,11,7],[]],
+        [[8,5,9,11,10],[]],
+        [[7,11,9],[]],
+        [[6,8,10],[]]
+    ]
+}
+
+let houses_noised2 = {
+    'buildingParts':[
+        house_noised2
+    ]
+}
+
 
 //Pyramide avec erreurs
 
@@ -366,6 +404,27 @@ let house_underconstrained = {
 }
 
 
+//Double triangle
+
+let double_t = {
+    'points':[
+        [  0,  1,  0],//0
+        [ -1, -1,  0],//1 
+        [  1, -1,  0] //2
+    ],
+    'faces':[
+        [[0,1,2],[]],//0
+        [[0,2,1],[]] //1
+    ]
+}
+
+let double_triangle = {
+    'buildingParts':[
+        double_t
+    ]
+}
+
+
 
 let mock_builds = {"Pyramid":[pyramid], 
                   "TPyramid":[truncated_pyramide],
@@ -373,7 +432,9 @@ let mock_builds = {"Pyramid":[pyramid],
                   "Houses":houses,
                   "Roof":[roof],
                   "house_noised":[houses_noised],
+                  "house_noised2":[houses_noised2],
                   "pyramid_noised":[pyramid_noised],
-                  "house_underconstrained":[house_underconstrained]
+                  "house_underconstrained":[house_underconstrained],
+                  "double_triangle":[double_triangle]
                 };
 export {mock_builds}

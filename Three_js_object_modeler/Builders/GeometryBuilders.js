@@ -30,7 +30,7 @@ class GeometryBuilder{
         this.face_data        = {'hExtIndex': new Array(nFaces), 'hIntIndices':new Array(nFaces),'planeEquation':new Array(nFaces)};
         this.point_data       = {'heIndex' : new Array(nPts),'nbAdjacentFaces': new Array(nPts), 'coords':new Array(nPts), 'supportPlanEquation':new Array(nPts)};
         this.halfedge_data    = {'fIndex':[],'pIndex' : [], 'oppIndex' : [], 'nextIndex' : [], 'eIndex':[]};
-        this.edge_data        = {'heIndex':[], 'supportPlanEquation':[]}
+        this.edge_data        = {'heIndex':[], 'supportPlanEquation':[], 'underconstrained':[]}
         this.GMLModel = building;
         this.LoD = LoD;
 
@@ -208,6 +208,7 @@ class GeometryBuilder{
 
             let v1 = this.halfedge_data.pIndex[h1];
             let v2 = this.halfedge_data.pIndex[h2];
+            //console.log(this.halfedge_data.oppIndex,h1,v1, h2);
 
             let faces1 = this.__getAdjacentFaces(v1);
             let faces2 = this.__getAdjacentFaces(v2);
@@ -236,6 +237,10 @@ class GeometryBuilder{
                 let n_support = Utils.normalize(Utils.crossProduct(n,v));
                 let d_support = Utils.dotProduct(n_support, p1).neg();
                 this.edge_data.supportPlanEquation[i]=[...n_support, d_support];
+                this.edge_data.underconstrained[i]=true;
+            }
+            else{
+                this.edge_data.underconstrained[i]=false;
             }
         }
 
@@ -245,7 +250,7 @@ class GeometryBuilder{
         this.face_data_object     = new FaceData(this.face_data.planeEquation,this.face_data.hExtIndex, this.face_data.hIntIndices);
         this.point_data_object    = new PointData(this.point_data.coords, this.point_data.heIndex, this.point_data.nbAdjacentFaces, this.point_data.supportPlanEquation);
         this.halfedge_data_object = new HalfEdgeData(this.halfedge_data.pIndex, this.halfedge_data.oppIndex, this.halfedge_data.nextIndex, this.halfedge_data.fIndex, this.halfedge_data.eIndex);
-        this.edge_data_object     = new EdgeData(this.edge_data.heIndex, this.edge_data.supportPlanEquation);
+        this.edge_data_object     = new EdgeData(this.edge_data.heIndex, this.edge_data.supportPlanEquation, this.edge_data.underconstrained);
         
     }
 
