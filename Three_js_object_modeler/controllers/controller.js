@@ -247,6 +247,9 @@ class Controller{
                 }
             }
             if(splittable){
+                if(pointsToSplit.length!=0){
+                    console.log("POINTS TO SPLIT",pointsToSplit);
+                }
                 for(let i=0; i<pointsToSplit.length; i++){
                     this.splitPointOnMvt(pointsToSplit[i].p_id, faceId, delta);
                     pointsToSplit[i].e_id = this.edgeData.count-1;
@@ -335,7 +338,6 @@ class Controller{
             //console.log(delta.toNumber(), delta_final.toNumber(), delta.sub(delta_final).toNumber());
             delta = delta.sub(delta_final);
 
-
             //degenerate faces
             do{
                 /*console.log("=".repeat(15));
@@ -345,29 +347,22 @@ class Controller{
                     if(encounteredEvent.type=="Edge degeneration"){
                         this.degenerateEdge(encounteredEvent.degeneratedCell);
                     }
-                    else if(encounteredEvent.type=="Face degeneration"){
-                        this.degenerateFace(encounteredEvent.degeneratedCell);
-                    }
                     this.labelBuilder.update(this,this.material);
                     this.labelData = this.labelBuilder.getLabel();
-                    /*for(let i=0; i<this.faceData.count; i++){
-                        this.printFace(i);
-                    }*/
+                    //this.printAllFaces();
                 }
                 
                 let faceDegenerations = this.detectFaceDegenerations(faceId);
                 faceDegenerations.forEach(event=>{
                     this.degenerateFace(event.degeneratedCell);
                     faceDeleted.push(event.degeneratedCell);
-                    /*for(let i=0; i<this.faceData.count; i++){
-                        this.printFace(i);
-                    }*/
+                    //this.printAllFaces();
                     this.labelBuilder.update(this,this.material);
                     this.labelData = this.labelBuilder.getLabel();
                 })
                 this.stop = faceDeleted.indexOf(faceId)!=-1;
                 if(this.stop){break}
-                this.findTValidityInterval(faceId);
+                this.findSimplificationEvent(faceId);
                 encounteredEvent = this.rightEvent;
                 let leftT = -Infinity;
                 let rightT = Infinity;
@@ -394,9 +389,7 @@ class Controller{
             this.printFace(i);
         }*/
         this.stop = false;
-        /*for(let i=0; i<this.faceData.count; i++){
-            this.printFace(i);
-        }*/
+        //this.printAllFaces();
         return faceDeleted;
     }
 
@@ -523,6 +516,62 @@ class Controller{
         return Utils.distance(p1,p2);
     }
 
+
+    /**
+     * TODO : Passer à un calcul pour n équations de plans
+     * @param {Array[float]} fEquation1 
+     * @param {Array[float]} fEquation2 
+     * @param {Array[float]} fEquation3 
+     * @returns 
+     */
+    computeExactCoords(point_id){
+        let faces = this.findAdjacentFaces(point_id);
+        let plans = [];
+        if(this.pointData.supportPlanEquation[point_id]){
+            plans.push([...this.pointData.supportPlanEquation[point_id]]);
+        }
+        faces.forEach(f=>{
+            plans.push([...this.faceData.planeEquation[f]]);
+        });
+
+
+        let he = this.pointData.heIndex[point_id];
+        let h = he;
+
+        let supportEdges = this.findSupportAdjacentFaces(point_id)
+        supportEdges.forEach(e=>{
+            plans.push([...this.edgeData.supportPlanEquation[e]]);
+        });
+
+        
+        
+        let p=[0,0,0];
+        //plans.push(this.pointData.embeddedPlanEquation[point_id]);
+        p = GeomUtils.computeIntersectionPoint2_exact(...plans);
+        
+        if(typeof(p[0])=="number" && isNaN(p[0])){
+            if(!this.isDual){
+                let plans_f = [];
+                plans.forEach(pl=>{
+                    plans_f.push([pl[0].toNumber(),pl[1].toNumber(),pl[2].toNumber(),pl[3].toNumber()]);
+                })
+
+                let supportPlans=[];
+                do{
+                    let e_id = this.halfEdgeData.eIndex[h];
+                    //console.log("      ",e_id, this.edgeData.supportPlanEquation[e_id])
+                    if(this.edgeData.supportPlanEquation[e_id]){
+                        plans.push(this.edgeData.supportPlanEquation[e_id]);
+                        supportPlans.push(this.edgeData.supportPlanEquation[e_id]);
+                    }
+                    h=this.halfEdgeData.next(this.halfEdgeData.opposite(h));
+                }while(h!=he)
+                let M = new ExactMatrix(plans);
+            }
+        }
+        return p;
+    }
+
     /**
      * TODO : Passer à un calcul pour n équations de plans
      * @param {Array[float]} fEquation1 
@@ -554,6 +603,9 @@ class Controller{
         let p=[0,0,0];
         //plans.push(this.pointData.embeddedPlanEquation[point_id]);
         p = GeomUtils.computeIntersectionPoint2(...plans);
+        //console.warn("underconstrained plans : ",faces, " for vertex ", point_id);
+        
+        
         
         if(isNaN(p[0])){
             if(!this.isDual){
@@ -691,6 +743,7 @@ class Controller{
 
         for(let i=0; i<this.edgeData.count; i++){
             if(typeof(this.edgeData.embeddedPlanEquation[i][0])=="number"){
+                console.log("!!!!!!!!!!!!new embedded plan in edge ",i);
                 this.edgeData.embeddedPlanEquation[i] = this.computeDefaultEmbeddedPlan(1,i);
             }
             let h  = this.edgeData.heIndex[i];
@@ -757,6 +810,36 @@ class Controller{
         }
 
     }
+
+
+    findSimplificationEvent(fIndex){
+        //console.log(edgesFromSplit);
+        this.leftEvent = undefined;
+        this.rightEvent = undefined;
+        /*let af = paramPlanM[0].toNumber();
+        let bf = paramPlanM[1].toNumber();
+        let cf = paramPlanM[2].toNumber();
+        let df = paramPlanM[3].toNumber();
+        console.log([af,bf,cf,df]);*/
+        //checkEdgeDegenerations
+        
+        
+        for(let i=0; i<this.edgeData.count; i++){
+            let h0 = this.edgeData.heIndex[i];
+            let h1 = this.halfEdgeData.opposite(h0);
+            let v0 = this.halfEdgeData.vertex(h0);
+            let v1 = this.halfEdgeData.vertex(h1);
+
+            let p0 = this.computeExactCoords(v0);
+            let p1 = this.computeExactCoords(v1);
+
+            let v = [p1[0].sub(p0[0]), p1[1].sub(p0[1]), p1[2].sub(p0[2])];
+            if(Utils.norme(v).isZero()){
+                this.rightEvent = new TopologicalEvent(fIndex, N(0), "Edge degeneration", i);
+            }
+        }
+    }
+
 
     findTValidityInterval(fIndex, pointsSplitted=[]){
         //console.log("----------");
@@ -945,6 +1028,9 @@ class Controller{
             values.push([...this.faceData.planeEquation[f]]);
         });
         let M = new ExactMatrix(values);
+        if(e2<e1){
+            e1-=1;
+        }
         if(M.rank()<=3){
             console.log("DEGENERATE EDGE FROM FACE DEGEN")
             this.degenerateEdge(e1);
@@ -1140,7 +1226,7 @@ class Controller{
 
 
             //Update of the graphical data of p2
-            console.log("COORDS",ExactMathUtils.arrayToExactMathArray(this.computeCoords(p2_id)));
+            //console.log("COORDS",ExactMathUtils.arrayToExactMathArray(this.computeCoords(p2_id)));
             this.pointData.coords[p2_id] = ExactMathUtils.arrayToExactMathArray(this.computeCoords(p2_id));
             this.pointData.nbAdjacentFaces[p2_id] = this.findAdjacentFaces(p2_id).length;
 
@@ -1438,6 +1524,7 @@ class Controller{
         if(cellType==1){
             let edgeId = cellId;
             let planEquation = this.edgeData.embeddedPlanEquation[edgeId];
+            console.log(ExactMathUtils.exactArrayToFloatArray(this.edgeData.embeddedPlanEquation[edgeId]));
             let h  = this.edgeData.heIndex[edgeId];
             let ho = this.halfEdgeData.opposite(h);
 
@@ -2086,6 +2173,13 @@ class Controller{
 
 
     //print fonctions
+    printAllFaces(){
+        console.log("*****************************");
+        for(let i=0; i<this.faceData.count; i++){
+            this.printFace(i);
+        }
+        console.log("*****************************");
+    }
 
     printFace(f_id){
         console.log("===========FACE "+String(f_id)+"===========");
@@ -2258,7 +2352,7 @@ class DualController extends Controller{
 
         for (let i=0; i<this.vertexData.count; i++){
             let p_id = this.vertexData.pIndex.getX(i);
-            let [x,y,z] = this.pointData.coords[p_id];
+            let [x,y,z] = ExactMathUtils.exactArrayToFloatArray(this.pointData.coords[p_id]);
             this.vertexData.coords.setX(i, x);
             this.vertexData.coords.setY(i, y);
             this.vertexData.coords.setZ(i, z);

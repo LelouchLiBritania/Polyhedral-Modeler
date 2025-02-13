@@ -40,8 +40,8 @@ class VertexData extends THREE.Mesh{
             centers[ i * 3 + 2 ] += 2*faceBorder[j+2];
         }
 
-        this.geometry.setAttribute( 'center', new THREE.BufferAttribute( centers, 3 ) );
-
+        this.geometry.setAttribute( 'center', new Float32ArrayDynamicBufferAttribute( centers, 3, false ) );
+        console.log("centers", this.geometry.getAttribute( 'center'));
         this.geometry.setAttribute('fIndex', this.fIndex);
         this.geometry.setAttribute('pIndex', this.pIndex);
         //this.geometry.setAttribute('oIndex', this.objIndex);
@@ -75,11 +75,12 @@ class VertexData extends THREE.Mesh{
             centers[ i * 3 + 1 ] += 2*faceBorder[j+1];
             centers[ i * 3 + 2 ] += 2*faceBorder[j+2];
         }
-
-        this.geometry.setAttribute( 'center', new THREE.BufferAttribute( centers, 3 ) );
-
+        //console.log("centers up 0", faceBorder);
+        this.geometry.setAttribute( 'center', new Float32ArrayDynamicBufferAttribute( centers, 3, false ) );
+        //console.log("centers up 1", this.geometry.getAttribute( 'center'));
         this.count    = fIndex.length; 
         this.applyChanges();
+        //console.log("centers up 2", this.geometry.getAttribute( 'center'));
     }
 
     applyChanges(){

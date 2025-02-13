@@ -289,10 +289,17 @@ class ShiftTool extends Tool{
                 //console.log(debugInfo);
 
 
-                
+                let faceDeleted = [];
                 //console.log("before shift");
+                try{
+                    faceDeleted = this.geometricalControllers.getSelectedController().faceShift(faceId, delta.sub(this.globalDelta));
+                }
+                catch(e){
+                    this.geometricalControllers.getSelectedController().printAllFaces();
+                    console.error(e);
+                }
 
-                let faceDeleted = this.geometricalControllers.getSelectedController().faceShift(faceId, delta.sub(this.globalDelta));
+                
                 //console.log("before onChange");
                 this.geometricalControllers.getSelectedController().onChange();
                 //this.lastPicked.copy(pickedPoint);

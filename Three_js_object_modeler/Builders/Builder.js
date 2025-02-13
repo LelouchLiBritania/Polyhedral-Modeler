@@ -145,7 +145,7 @@ class SceneBuilder{
         }
         this.vertexData_object.update(this.vertex_data.position, this.vertex_data.normal,
             this.vertex_data.uv, this.vertex_data.fIndex, 
-            this.vertex_data.pIndex, objId, this.vertex_data.faceBorder, material);
+            this.vertex_data.pIndex, this.vertex_data.faceBorder);
     }
     computeTriangulation(geometricalController){
         this.triangle_data = {'pIndex':[], 'fIndex':[]};

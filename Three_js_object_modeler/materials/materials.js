@@ -883,9 +883,10 @@ buildingNotSelectedMaterial.side = THREE.DoubleSide;
 buildingPointedMaterial.side = THREE.DoubleSide;
 buildingSelectedMaterial.side = THREE.DoubleSide;
 pointsMaterial.uniforms.size.value = 20;
-let dualMaterial = buildingMaterialDebug.clone();
+let dualMaterial = buildingMaterial.clone();
+let buildingImageMaterial = buildingMaterial.clone();
 
-export {dualMaterial, buildingPointedMaterial, buildingSelectedMaterial, buildingNotSelectedMaterial, pointsMaterial, buildingMaterial, buildingMaterialDebug, DebugFlipMaterial, FlipEdgeMaterial, FacePointMaterial, SplitPointMaterial}
+export {buildingImageMaterial, dualMaterial, buildingPointedMaterial, buildingSelectedMaterial, buildingNotSelectedMaterial, pointsMaterial, buildingMaterial, buildingMaterialDebug, DebugFlipMaterial, FlipEdgeMaterial, FacePointMaterial, SplitPointMaterial}
 
 
 

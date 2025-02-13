@@ -333,6 +333,20 @@ function arrayToExactMathArray(a){
     return res;
 }
 
+function exactArrayToFloatArray(a){
+    let res = [];
+    a.forEach(e=>{
+        if(typeof(e)!="number"){
+            res.push(e.toNumber());
+        }
+        else{
+            res.push(e);
+        }
+        
+    })
+    return res;
+}
+
 function print(...values){
     let s="";
     values.forEach(value=>{
@@ -353,4 +367,4 @@ function print(...values){
 
 
 
-export {max, min, gt, gte, lt, lte, print, arrayToExactMathArray}
+export {max, min, gt, gte, lt, lte, print, arrayToExactMathArray, exactArrayToFloatArray}

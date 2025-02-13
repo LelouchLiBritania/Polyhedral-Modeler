@@ -406,6 +406,41 @@ function computeIntersectionPoint2(...plans){
     
 }
 
+/**
+ * 
+ */
+function computeIntersectionPoint2_exact(...plans){
+    if(plans.length<3){
+        console.error("Underconstrained plan")
+    }
+    else{
+    ////Algorithme du pivot de gauss
+        let A_values = [];
+        let D_values = [];
+        //Initilisation du système d'équations
+        plans.forEach(plan=>{
+            A_values.push(plan.slice(0,3));
+            D_values.push([plan[3]]);
+        })
+
+        let A = new ExactMatrix(A_values);
+        let D = new ExactMatrix(D_values);
+
+        let res = A.solve(D);
+
+        //console.log(A, D);
+
+        if(res.l!=0){
+            return([res[0][0].neg(),res[1][0].neg(),res[2][0].neg()]);
+        }
+        else{
+            return [NaN,NaN,NaN];
+        }
+
+    }
+    
+}
+
 //Fonctions auxiliaires pour le pivot de gauss
 function reorganize(A, D, step){
     for(let i=step; i<3; i++){
@@ -434,4 +469,4 @@ function reorganize(A, D, step){
 
 
 
-export {computeTCollision, computeIntersectionPoint2, intersects, checkAutoIntersectionWithLogs, computeToHorizontalMatrix, checkAutoIntersection, triangulate, computeShiftTValidity,findClosestPointToNLines,projectPointOnLine,computeIntersectionPoint}
+export {computeTCollision,computeIntersectionPoint2_exact, computeIntersectionPoint2, intersects, checkAutoIntersectionWithLogs, computeToHorizontalMatrix, checkAutoIntersection, triangulate, computeShiftTValidity,findClosestPointToNLines,projectPointOnLine,computeIntersectionPoint}
