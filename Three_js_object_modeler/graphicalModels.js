@@ -8,6 +8,14 @@ class VertexData extends THREE.Mesh{
 
         super(new THREE.BufferGeometry() , material);
 
+        this.verticesArg = vertices;
+        this.normalsArg = normals;
+        this.uvsArg = uvs;
+        this.fIndexArg = fIndex;
+        this.pIndexArg = pIndex;
+        this.objIndexArg = objIndex;
+        this.faceBorderArg = faceBorder;
+
         this.coords   = new Float32ArrayDynamicBufferAttribute(new Float32Array(vertices), 3, false);
         this.normal   = new Float32ArrayDynamicBufferAttribute(new Float32Array(normals), 3, false);
         this.uv       = new Float32ArrayDynamicBufferAttribute(new Float32Array(uvs), 2, false);
@@ -50,6 +58,14 @@ class VertexData extends THREE.Mesh{
     }
 
     update(vertices, normals, uvs, fIndex, pIndex, faceBorder){
+
+        this.verticesArg = vertices;
+        this.normalsArg = normals;
+        this.uvsArg = uvs;
+        this.fIndexArg = fIndex;
+        this.pIndexArg = pIndex;
+        this.faceBorderArg = faceBorder;
+
         this.coords   = new Float32ArrayDynamicBufferAttribute(new Float32Array(vertices), 3, false);
         this.normal   = new Float32ArrayDynamicBufferAttribute(new Float32Array(normals), 3, false);
         this.uv       = new Float32ArrayDynamicBufferAttribute(new Float32Array(uvs), 2, false);
@@ -147,6 +163,9 @@ class VertexData extends THREE.Mesh{
             }
         }
         this.applyChanges();
+    }
+    clone(){
+        return new VertexData(this.verticesArg, this.normalsArg, this.uvsArg, this.fIndexArg, this.pIndexArg, this.objIndexArg, this.faceBorderArg, this.material);
     }
 }
 

@@ -9,7 +9,7 @@ import { embeddings } from '../GeometricalEmbedding';
 import * as Certificats from "../certificats";
 import { isTopologicallyValid } from '../validityCheck';
 import * as THREE from 'three'
-import { pointsMaterial } from '../materials/materials';
+import { pointsMaterial, buildingImageMaterial } from '../materials/materials';
 import { Vector2 } from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { ExactNumber, ExactNumber as N } from 'exactnumber/dist/index.umd';
@@ -76,7 +76,9 @@ class Controller{
             this.sceneBuilder.build(this, this.material);
     
             this.vertexData = this.sceneBuilder.getScene();
-
+            this.imageVertexData = this.vertexData.clone()
+            this.imageVertexData.material = buildingImageMaterial;
+            
 
             
         }
@@ -119,6 +121,8 @@ class Controller{
         this.updateScene();
         //console.log("before get scene");
         this.vertexData = this.sceneBuilder.getScene();
+        this.imageVertexData = this.vertexData.clone();
+        this.imageVertexData.material = buildingImageMaterial;
         this.labelData = this.labelBuilder.getLabel();
         
         if(!(this.dualController == null)){

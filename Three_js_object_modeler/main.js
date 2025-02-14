@@ -106,13 +106,15 @@ const w = window;
     imageCamera.position.y = 10;
 
     const imageScene = new THREE.Scene();
-    imageScene.background = new THREE.Color(0xbbbbbb);
+    imageScene.background = new THREE.Color(0xdddddd);
 
 
 
-    let controllers = new ControllersCollection([],3, scene, dualScene, dualMaterial, pointsMaterial);
+    let controllers = new ControllersCollection([],3, scene, dualScene, imageScene, dualMaterial, pointsMaterial);
     let threeObjects = [];
     console.log(controllers);
+
+
 
 
 
@@ -196,6 +198,7 @@ const w = window;
         requestAnimationFrame( animate );
         controls.update();
         dualControls.update();
+        imageControls.update();
         render();
 
         renderer.render( scene, camera );
@@ -408,8 +411,10 @@ const w = window;
         dualCamera.updateProjectionMatrix();
 
         dualRenderer.setSize( window.innerWidth*(screen_split_ratio2-screen_split_ratio1), window.innerHeight );
+        
+        imageCamera.aspect = window.innerWidth*(1.-screen_split_ratio2) / window.innerHeight;
+        imageCamera.updateProjectionMatrix();
         imageRenderer.setSize( window.innerWidth*(1.-screen_split_ratio2), window.innerHeight );
-        console.log(nb_windows, screen_split_ratio1, screen_split_ratio2);
     }
     window.addEventListener( 'resize', onWindowResize );
 
@@ -418,6 +423,10 @@ const w = window;
         controls.target.copy(newCenter);
         controls.update();
         camera.position.copy(newPos);
+
+        imageControls.target.copy(newCenter);
+        imageControls.update();
+        imageCamera.position.copy(newPos);
 
 
         pLight1.position.set( newCenter.x+50*dist_sun, newCenter.y+50*dist_sun, newCenter.z+50*dist_sun );  
