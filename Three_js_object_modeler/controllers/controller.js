@@ -76,7 +76,7 @@ class Controller{
             this.sceneBuilder.build(this, this.material);
     
             this.vertexData = this.sceneBuilder.getScene();
-            this.imageVertexData = this.vertexData.clone()
+            this.imageVertexData = this.sceneBuilder.getImageScene();
             this.imageVertexData.material = buildingImageMaterial;
             
 
@@ -121,7 +121,7 @@ class Controller{
         this.updateScene();
         //console.log("before get scene");
         this.vertexData = this.sceneBuilder.getScene();
-        this.imageVertexData = this.vertexData.clone();
+        this.imageVertexData = this.sceneBuilder.getImageScene();
         this.imageVertexData.material = buildingImageMaterial;
         this.labelData = this.labelBuilder.getLabel();
         
