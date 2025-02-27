@@ -28,9 +28,9 @@ class GeometryBuilder{
         let nPts = maxPointId-minPointId+1;
         let nFaces = maxFaceId-minFaceId+1;
         this.face_data        = {'hExtIndex': new Array(nFaces), 'hIntIndices':new Array(nFaces),'planeEquation':new Array(nFaces)};
-        this.point_data       = {'heIndex' : new Array(nPts),'nbAdjacentFaces': new Array(nPts), 'coords':new Array(nPts)};
+        this.point_data       = {'heIndex' : new Array(nPts),'nbAdjacentFaces': new Array(nPts), 'coords':new Array(nPts), 'supportPlanEquation':new Array(nPts)};
         this.halfedge_data    = {'fIndex':[],'pIndex' : [], 'oppIndex' : [], 'nextIndex' : [], 'eIndex':[]};
-        this.edge_data        = {'heIndex':[]}
+        this.edge_data        = {'heIndex':[], 'supportPlanEquation':[], 'underconstrained':[]}
         this.GMLModel = building;
         this.LoD = LoD;
 
@@ -62,6 +62,22 @@ class GeometryBuilder{
                 let n_ext_he = polygon.exterior.size;
                 let nb_he = this.halfedge_data.pIndex.length;
                 this.face_data.hExtIndex[polygon.id-minFaceId] = [nb_he];
+
+                for(let i=0; i<n_ext_he; i++){
+                    let point3Do = polygon.exterior.positions[i];
+                    let origin = point3Do.id-minPointId;
+                    let point3Dt = polygon.exterior.positions[(i+1)%n_ext_he];
+                    let target = point3Dt.id-minPointId;
+                    for(let j=0; j<this.halfedge_data.pIndex.length; j++){
+                        let origin2 = this.halfedge_data.pIndex[j];
+                        let target2 = this.halfedge_data.pIndex[this.halfedge_data.nextIndex[j]];
+                        if (origin2==origin && target2==target){
+                            polygon.reverse();
+                            break;
+                        }
+                    }
+                }
+
                 for(let i=0; i<n_ext_he; i++){
                     let point3D = polygon.exterior.positions[i];
                     let origin = point3D.id-minPointId;
@@ -124,40 +140,121 @@ class GeometryBuilder{
             }
         }
 
+        
+
         //computes the number of faces adjacent to the points
         //console.log("Arrity loop");
         for(let i=0; i<this.point_data.nbAdjacentFaces.length; i++){
-            let he_0 = this.point_data.heIndex[i][0];
-            let he = he_0;
-            //console.log(he);
-            let faces = [];
-            let j=0;
-            do{
-                j++;
-                faces = Utils.mergeListsWithoutDoubles(faces,[this.halfedge_data.fIndex[he]]);
-                if(this.halfedge_data.oppIndex[he]==undefined&&he!=undefined){
-                    console.log("opp",he);
-                }
-                he = this.halfedge_data.oppIndex[he];
-                if(this.halfedge_data.nextIndex[he]==undefined&&he!=undefined){
-                    console.log("next",he);
-                }
-                he = this.halfedge_data.nextIndex[he];
-                
-            }while(he!=he_0 && j<100)
+            let faces = this.__getAdjacentFaces(i)
             
             this.point_data.nbAdjacentFaces[i]=faces.length;
+            
+            //Add a supplort plan if the adjacent plans does not define
+            //properly the point
+            /*if(faces.length>=3){
+                let values = [];
+                for(let i=0; i<faces.length; i++){
+                    let eq = this.face_data.planeEquation[faces[i]];
+                    values.push([...eq]);
+                }
+                
+
+
+                let r = new ExactMatrix(values).rank();
+                if(r<=3){
+                    let n;
+
+                    let n1 = this.face_data.planeEquation[faces[0]].slice(0,3);
+                    let n2 = this.face_data.planeEquation[faces[1]].slice(0,3);
+                    let n3 = this.face_data.planeEquation[faces[2]].slice(0,3);
+                    
+                    let n1_n2 = Utils.crossProduct(n1,n2);
+                    let n1_n3 = Utils.crossProduct(n1,n3);
+                    let n2_n3 = Utils.crossProduct(n2,n3);
+                    if(!Utils.norme(n1_n2).isZero()){
+                        n = n1_n2;
+                    }
+                    else if(!Utils.norme(n1_n3).isZero()){
+                        n = n1_n3;
+                    }
+                    else if(!Utils.norme(n2_n3).isZero()){
+                        n = n2_n3;
+                    }
+                    else{
+                        let n1_f=[n1[0].toNumber(),n1[1].toNumber(),n1[2].toNumber()];
+                        let n2_f=[n2[0].toNumber(),n2[1].toNumber(),n2[2].toNumber()];
+                        let n3_f=[n3[0].toNumber(),n3[1].toNumber(),n3[2].toNumber()];
+                        console.log(n1_f,n2_f,n3_f);
+                        throw new Error("Point not enough constainted");
+                    }
+
+
+                    let p1 = this.point_data.coords[i];
+                    let d = n[0].mul(p1[0]).add(n[1].mul(p1[1])).add(n[2].mul(p1[2]));
+                    d = d.neg();
+                    this.point_data.supportPlanEquation[i]=[...n, d];
+                }
+            }
+            else{
+                
+            }*/
+        }
+
+
+        
+        for(let i=0; i<this.edge_data.heIndex.length; i++){
+            let h1 = this.edge_data.heIndex[i];
+            let h2 = this.halfedge_data.oppIndex[h1];
+
+            let v1 = this.halfedge_data.pIndex[h1];
+            let v2 = this.halfedge_data.pIndex[h2];
+            //console.log(this.halfedge_data.oppIndex,h1,v1, h2);
+
+            let faces1 = this.__getAdjacentFaces(v1);
+            let faces2 = this.__getAdjacentFaces(v2);
+
+            let faces = Utils.getCommonElts(faces1, faces2);
+
+            let values = [];
+
+            let eq1 = this.face_data.planeEquation[faces[0]];
+            let eq2 = this.face_data.planeEquation[faces[1]];
+            values.push([...eq1]);
+            values.push([...eq2]);
+            
+            let M = new ExactMatrix(values);
+            if(M.rank()<2){
+                /*console.log("##########################");
+                console.log("##########################");
+                console.log(i, M.rank(true));
+                console.log("___________________________");
+                M.print();*/
+                let [a,b,c,d]=[...eq1];
+                let n = [a,b,c];
+                let p1 = this.point_data.coords[v1];
+                let p2 = this.point_data.coords[v2];
+                let v = [p2[0].sub(p1[0]),p2[1].sub(p1[1]),p2[2].sub(p1[2])];
+                let n_support = Utils.normalize(Utils.crossProduct(n,v));
+                let d_support = Utils.dotProduct(n_support, p1).neg();
+                this.edge_data.supportPlanEquation[i]=[...n_support, d_support];
+                this.edge_data.underconstrained[i]=true;
+            }
+            else{
+                this.edge_data.underconstrained[i]=false;
+            }
         }
 
         //console.log("face arrity computed");
         
 
         this.face_data_object     = new FaceData(this.face_data.planeEquation,this.face_data.hExtIndex, this.face_data.hIntIndices);
-        this.point_data_object    = new PointData(this.point_data.coords, this.point_data.heIndex, this.point_data.nbAdjacentFaces);
+        this.point_data_object    = new PointData(this.point_data.coords, this.point_data.heIndex, this.point_data.nbAdjacentFaces, this.point_data.supportPlanEquation);
         this.halfedge_data_object = new HalfEdgeData(this.halfedge_data.pIndex, this.halfedge_data.oppIndex, this.halfedge_data.nextIndex, this.halfedge_data.fIndex, this.halfedge_data.eIndex);
-        this.edge_data_object     = new EdgeData(this.edge_data.heIndex);
+        this.edge_data_object     = new EdgeData(this.edge_data.heIndex, this.edge_data.supportPlanEquation, this.edge_data.underconstrained);
         
     }
+
+
 
     /**
      * Tries to correct the plans of the model such that it 
@@ -186,8 +283,10 @@ class GeometryBuilder{
         }
 
         while(!facesQueue.isEmpty()){
-            console.log(PriorityFace.toString());
+            //console.log(PriorityFace.toString());
+            //console.log([...PriorityFace.instances]);
             let face = facesQueue.pop();
+            //console.log(face.id, face.points_id, facesQueue.toArray());
             let fixedPoints = face.getFixedPoints();
             if(fixedPoints.length>1){
                 let d4;
@@ -224,6 +323,10 @@ class GeometryBuilder{
                     let A2 = (new ExactMatrix(values2)).det();
                     let A3 = (new ExactMatrix(values3)).det();
                     let A4 = (new ExactMatrix(values4)).det();
+                    if(A4.isZero()){
+                        console.log(p_id, PriorityFace.constraints[p_id]);
+                        new ExactMatrix(values4).print();
+                    }
                     let d4_i = d1.mul(A1).sub(d2.mul(A2)).add(d3.mul(A3)).div(A4);//(d1*A1-d2*A2+d3*A3)/A4
                     if(d4){
                         if(!d4.eq(d4_i)){
@@ -240,7 +343,7 @@ class GeometryBuilder{
             }
             else if(fixedPoints.length==1){
                 let p_id = fixedPoints[0];
-                console.log("face "+face.id+" position constrained by point "+p_id);
+                //console.log("face "+face.id+" position constrained by point "+p_id);
                 let plans = PriorityFace.constraints[p_id].slice(0,3);
                 let equations = [];
                 plans.forEach(plan=>{
@@ -276,7 +379,13 @@ class GeometryBuilder{
             }
 
             face.points_id.forEach(p_id=>{
+                let plans = PriorityFace.constraints[p_id];
+                /*let equations = [[...controller.faceData.planeEquation[face.id]]];
+                plans.forEach(plan=>{
+                    equations.push([...controller.faceData.planeEquation[plan]]);
+                })*/
                 PriorityFace.constraints[p_id].push(face.id);
+                //PriorityFace.constraints[p_id].push(face.id);
             })
             PriorityFace.updatePriorities();
 
@@ -303,11 +412,33 @@ class GeometryBuilder{
         
     }
 
+    __getAdjacentFaces(v){
+        let he_0 = this.point_data.heIndex[v][0];
+        let he = he_0;
+        let faces = [];
+        let j=0;
+        do{
+            j++;
+            faces = Utils.mergeListsWithoutDoubles(faces,[this.halfedge_data.fIndex[he]]);
+            if(this.halfedge_data.oppIndex[he]==undefined&&he!=undefined){
+                console.log("opp",he);
+            }
+            he = this.halfedge_data.oppIndex[he];
+            if(this.halfedge_data.nextIndex[he]==undefined&&he!=undefined){
+                console.log("next",he);
+            }
+            he = this.halfedge_data.nextIndex[he];
+            
+        }while(he!=he_0 && j<100)
+        return faces;
+    }
+    
+
 }
 
 class PriorityFace{
     instances = [];
-    constraints = [];
+    constraints = []; //
     
     constructor(f_id, points){
         this.priority = 0;

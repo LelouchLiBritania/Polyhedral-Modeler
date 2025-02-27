@@ -1,15 +1,16 @@
-import { buildingMaterial, buildingNotSelectedMaterial, buildingMaterialDebug } from "../materials/materials";
+import { buildingMaterial, buildingNotSelectedMaterial, buildingMaterialDebug, buildingImageMaterial } from "../materials/materials";
 
 
 class ControllersCollection{
     static threeObjects = [];
-    constructor(controllers, LoD, scene, dualScene, dualMaterial, dualPointsMaterial){
+    constructor(controllers, LoD, scene, dualScene, imageScene, dualMaterial, dualPointsMaterial){
         this.controllers = controllers;
         this.LoD = LoD;
         this.selectedController = controllers.length-1;
         this.selectedMaterial = buildingMaterial;
         this.scene = scene;
         this.dualScene = dualScene;
+        this.imageScene = imageScene;
         this.dualMaterial = dualMaterial;
         this.dualPointsMaterial = dualPointsMaterial;
     }
@@ -31,6 +32,7 @@ class ControllersCollection{
         if(this.selectedController != -1){
             this.dualScene.remove(this.controllers[this.selectedController].dualController.vertexData);
             this.dualScene.remove(this.controllers[this.selectedController].dualController.dualPoints);
+            this.imageScene.remove(this.controllers[this.selectedController].imageVertexData);
             this.scene.remove(this.controllers[this.selectedController].labelData);
             this.controllers[this.selectedController].vertexData.material = buildingNotSelectedMaterial;
             this.selectedController = -1;
@@ -41,6 +43,9 @@ class ControllersCollection{
                 this.dualScene.add(this.controllers[i].dualController.vertexData);
                 this.dualScene.add(this.controllers[i].dualController.dualPoints);
                 this.scene.add(this.controllers[this.selectedController].labelData);
+
+                //this.controllers[this.selectedController].imageVertexData.material = buildingImageMaterial;
+                this.imageScene.add(this.controllers[this.selectedController].imageVertexData);
                 
                 this.controllers[this.selectedController].vertexData.material = this.selectedMaterial;
                 //Pour la couleur des faces
@@ -49,6 +54,10 @@ class ControllersCollection{
 
                 buildingMaterial.uniforms.maxPointId.value = this.controllers[this.selectedController].pointData.count;
                 buildingMaterial.uniforms.maxFaceId.value = this.controllers[this.selectedController].faceData.count;
+
+                buildingImageMaterial.uniforms.maxPointId.value = this.controllers[this.selectedController].pointData.count;
+                buildingImageMaterial.uniforms.maxFaceId.value = this.controllers[this.selectedController].faceData.count;
+
 
                 this.dualPointsMaterial.uniforms.maxPointId.value = this.controllers[this.selectedController].dualController.pointData.count;
                 

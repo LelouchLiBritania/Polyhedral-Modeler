@@ -146,6 +146,9 @@ class ShiftTool extends Tool{
         this.selectedEdge = -1;
         this.selectedPoint = -1;
 
+        this.recomputeOriginPoint=false;
+        this.check_local_auto_int=false;
+
         const geometryEdges = new THREE.BufferGeometry();
         
         this.shiftEdgeMaterial = shiftFaceEdgeMaterial;
@@ -154,19 +157,22 @@ class ShiftTool extends Tool{
         
 
 
-        /*this.verticesPPT = [];
+        this.verticesPPT = [];
         this.geometryPPT = new THREE.BufferGeometry();
         this.materialPPT = new THREE.PointsMaterial( { color: 0x00FF00 , size: 0.5} );
         this.projectedPointThree = new THREE.Points(this.geometryPPT, this.materialPPT);
-        scene.add(this.projectedPointThree);*/
+        scene.add(this.projectedPointThree);
 
         
 
         this.scene = scene;
-        /*for(let i=0; i<this.geometricalControllers.getSelectedController().vertexData.count; i++){
-            let pt_index = this.geometricalControllers.getSelectedController().vertexData.pIndex.getX(i);
-            faceArrity.push(this.geometricalControllers.getSelectedController().pointData.nbAdjacentFaces[pt_index]);
-        }*/
+        if(this.geometricalControllers.getSelectedController()){
+            for(let i=0; i<this.geometricalControllers.getSelectedController().vertexData.count; i++){
+                let pt_index = this.geometricalControllers.getSelectedController().vertexData.pIndex.getX(i);
+                faceArrity.push(this.geometricalControllers.getSelectedController().pointData.nbAdjacentFaces[pt_index]);
+            }
+        }
+        
         const geometry = new THREE.BufferGeometry();
         this.faceVerticesMaterial = shiftFacePointMaterial;
         this.faceVertices = new THREE.Points( geometry, this.faceVerticesMaterial );
@@ -191,8 +197,6 @@ class ShiftTool extends Tool{
         //console.log("begin onMove");
         if(this.clicked){
             let faceId = this.selectedFace;
-            let recomputeOriginPoint = this.selectedPoint!=-1 || this.selectedEdge!=-1;
-            
             if(this.selectedPoint!=-1){
                 this.selectedFace = this.geometricalControllers.getSelectedController().faceData.count;
                 this.geometricalControllers.getSelectedController().splitCellIntoFace(this.selectedPoint,0);
@@ -200,6 +204,8 @@ class ShiftTool extends Tool{
                 copy.splitCellIntoFace(this.selectedPoint,0);
                 isTopologicallyValid(copy);*/
                 this.selectedPoint=-1;
+                this.recomputeOriginPoint = true;
+                this.check_local_auto_int = true;
                 this.updateMaterials();
             }
             else if(this.selectedEdge!=-1){
@@ -209,6 +215,8 @@ class ShiftTool extends Tool{
                 copy.splitCellIntoFace(this.selectedEdge,1);
                 isTopologicallyValid(copy);*/
                 this.selectedEdge=-1;
+                this.recomputeOriginPoint = true;
+                this.check_local_auto_int = true;
                 this.updateMaterials();
             }
             else if(faceId!=-1){
@@ -250,11 +258,11 @@ class ShiftTool extends Tool{
                 let cx = N(String(this.intersectionPoint.x));
                 let cy = N(String(this.intersectionPoint.y));
                 let cz = N(String(this.intersectionPoint.z));
-                if(recomputeOriginPoint){
-                    cx = N(String(this.geometricalController.faceData.center[3*faceId]));
-                    cy = N(String(this.geometricalController.faceData.center[3*faceId+1]));
-                    cz = N(String(this.geometricalController.faceData.center[3*faceId+2]));
-                }
+                /*if(this.recomputeOriginPoint){
+                    cx = N(String(this.geometricalControllers.getSelectedController().faceData.center[3*faceId]));
+                    cy = N(String(this.geometricalControllers.getSelectedController().faceData.center[3*faceId+1]));
+                    cz = N(String(this.geometricalControllers.getSelectedController().faceData.center[3*faceId+2]));
+                }*/
                 debugInfo["face center"] = [cx,cy,cz];
 
                 let pickingLine = [[N(String(this.camera.position.x)),N(String(this.camera.position.y)),N(String(this.camera.position.z))],[N(String(m.x)),N(String(m.y)),N(String(m.z))]];
@@ -289,10 +297,19 @@ class ShiftTool extends Tool{
                 //console.log(debugInfo);
 
 
-                
+                let faceDeleted = [];
                 //console.log("before shift");
+                try{
+                    faceDeleted = this.geometricalControllers.getSelectedController().faceShift(faceId, delta.sub(this.globalDelta), this.check_local_auto_int);
+                }
+                catch(e){
+                    //this.geometricalControllers.getSelectedController().printAllFaces();
+                    console.error(e);
+                }
+                this.recomputeOriginPoint = false;
+                this.check_local_auto_int = false;
 
-                let faceDeleted = this.geometricalControllers.getSelectedController().faceShift(faceId, delta.sub(this.globalDelta));
+                
                 //console.log("before onChange");
                 this.geometricalControllers.getSelectedController().onChange();
                 //this.lastPicked.copy(pickedPoint);
@@ -318,12 +335,12 @@ class ShiftTool extends Tool{
 
                 //this.geometricalController.updateScene();
 
-                /*this.verticesPPT.push(projectedPoint[0], projectedPoint[1], projectedPoint[2]);
+                this.verticesPPT.push(projectedPoint[0].toNumber(), projectedPoint[1].toNumber(), projectedPoint[2].toNumber());
 
                 this.geometryPPT.setAttribute( 'position', new THREE.Float32BufferAttribute( this.verticesPPT, 3 ) );
                 
                 this.geometryPPT.getAttribute("position").needsUpdate = true;
-                */
+                
                 //console.log("before recompute face points");
                 this.recomputeFacePoints();
                 this.updateLines();

@@ -39,7 +39,7 @@ class MockObjectLoader extends Loader{
         let buildingsModel = modelBuilder.getBuildings();
 
         let geometryBuilder = new GeometryBuilder();
-        console.log(buildingsModel);
+        //console.log(buildingsModel);
         buildingsModel.forEach(building=>{
             geometryBuilder.build(building, 3);
             let geometricalController = geometryBuilder.getScene(buildingMaterial);

@@ -1,3 +1,4 @@
+import { ExactMatrix } from './utils/exactMatrix';
 import * as Utils from './utils/utils';
 
 function isTopologicallyValid(geometricalController){
@@ -213,6 +214,78 @@ function isTopologicallyValid(geometricalController){
             issue = "edges are not well defined";
         }
     }
+
+    //Check that all the faces adjacent to a point intersects in one only point
+    if(valid){
+        let error_point_id = 0;
+        for(let i=0; i<geometricalController.pointData.count; i++){
+            let faces = geometricalController.findAdjacentFaces(i);
+            let values = [];
+            faces.forEach(face_id => {
+                values.push([...geometricalController.faceData.planeEquation[face_id]]);
+            });
+            let supportEdges = geometricalController.findSupportAdjacentFaces(i);
+            supportEdges.forEach(e=>{
+                values.push([...geometricalController.edgeData.supportPlanEquation[e]]);
+            });
+            let M = new ExactMatrix(values);
+            valid = M.rank()==3;
+            if(!valid){
+                error_point_id = i;
+                break;
+            }
+        }
+        if(!valid){
+            issue = "Adjacent faces does not intersect on point "+error_point_id;
+        }
+    }
+
+    //Check that the point calculated belongs to all the support planes of its adjacent faces
+    if(valid){
+        let error_point_id = 0;
+        let error_plane_id = {'type':null, 'id':null};
+        for(let i=0; i<geometricalController.pointData.count; i++){
+            let [x,y,z] = geometricalController.computeExactCoords(i);
+            let faces = geometricalController.findAdjacentFaces(i);
+            let supportEdges = geometricalController.findSupportAdjacentFaces(i);
+            for(let j=0; j<faces.length; j++){
+                let face_id = faces[j];
+                let [a,b,c,d] = geometricalController.faceData.planeEquation[face_id];
+            
+                valid = a.mul(x).add(b.mul(y)).add(c.mul(z)).add(d).isZero();
+                if(!valid){
+                    error_plane_id.type="plane in face";
+                    error_plane_id.id = face_id;
+                    console.log(a.mul(x).add(b.mul(y)).add(c.mul(z)).add(d).toNumber());
+                    break;
+                }
+            };
+
+            for(let j=0; j<supportEdges.length; j++){
+                let e_id = supportEdges[j];
+                let [a,b,c,d] = geometricalController.edgeData.supportPlanEquation[e_id];
+            
+                valid = a.mul(x).add(b.mul(y)).add(c.mul(z)).add(d).isZero();
+                if(!valid){
+                    error_plane_id.type="support plane in edge";
+                    error_plane_id.id = e_id;
+                    console.log(a.mul(x).add(b.mul(y)).add(c.mul(z)).add(d).toNumber());
+                    break;
+                }
+            }
+            
+            if(!valid){
+                error_point_id = i;
+                break;
+            }
+        }
+        if(!valid){
+            issue = "Point "+error_point_id + " does not belong to "+error_plane_id.type+" "+error_plane_id.id;
+        }
+    }
+
+
+
 
     if(valid){
         console.log(geometricalController, "VALID");

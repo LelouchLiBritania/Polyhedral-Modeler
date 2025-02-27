@@ -8,6 +8,14 @@ class VertexData extends THREE.Mesh{
 
         super(new THREE.BufferGeometry() , material);
 
+        this.verticesArg = vertices;
+        this.normalsArg = normals;
+        this.uvsArg = uvs;
+        this.fIndexArg = fIndex;
+        this.pIndexArg = pIndex;
+        this.objIndexArg = objIndex;
+        this.faceBorderArg = faceBorder;
+
         this.coords   = new Float32ArrayDynamicBufferAttribute(new Float32Array(vertices), 3, false);
         this.normal   = new Float32ArrayDynamicBufferAttribute(new Float32Array(normals), 3, false);
         this.uv       = new Float32ArrayDynamicBufferAttribute(new Float32Array(uvs), 2, false);
@@ -40,8 +48,8 @@ class VertexData extends THREE.Mesh{
             centers[ i * 3 + 2 ] += 2*faceBorder[j+2];
         }
 
-        this.geometry.setAttribute( 'center', new THREE.BufferAttribute( centers, 3 ) );
-
+        this.geometry.setAttribute( 'center', new Float32ArrayDynamicBufferAttribute( centers, 3, false ) );
+        //console.log("centers", this.geometry.getAttribute( 'center'));
         this.geometry.setAttribute('fIndex', this.fIndex);
         this.geometry.setAttribute('pIndex', this.pIndex);
         //this.geometry.setAttribute('oIndex', this.objIndex);
@@ -50,6 +58,14 @@ class VertexData extends THREE.Mesh{
     }
 
     update(vertices, normals, uvs, fIndex, pIndex, faceBorder){
+
+        this.verticesArg = vertices;
+        this.normalsArg = normals;
+        this.uvsArg = uvs;
+        this.fIndexArg = fIndex;
+        this.pIndexArg = pIndex;
+        this.faceBorderArg = faceBorder;
+
         this.coords   = new Float32ArrayDynamicBufferAttribute(new Float32Array(vertices), 3, false);
         this.normal   = new Float32ArrayDynamicBufferAttribute(new Float32Array(normals), 3, false);
         this.uv       = new Float32ArrayDynamicBufferAttribute(new Float32Array(uvs), 2, false);
@@ -75,11 +91,12 @@ class VertexData extends THREE.Mesh{
             centers[ i * 3 + 1 ] += 2*faceBorder[j+1];
             centers[ i * 3 + 2 ] += 2*faceBorder[j+2];
         }
-
-        this.geometry.setAttribute( 'center', new THREE.BufferAttribute( centers, 3 ) );
-
+        //console.log("centers up 0", faceBorder);
+        this.geometry.setAttribute( 'center', new Float32ArrayDynamicBufferAttribute( centers, 3, false ) );
+        //console.log("centers up 1", this.geometry.getAttribute( 'center'));
         this.count    = fIndex.length; 
         this.applyChanges();
+        //console.log("centers up 2", this.geometry.getAttribute( 'center'));
     }
 
     applyChanges(){
@@ -146,6 +163,9 @@ class VertexData extends THREE.Mesh{
             }
         }
         this.applyChanges();
+    }
+    clone(){
+        return new VertexData(this.verticesArg, this.normalsArg, this.uvsArg, this.fIndexArg, this.pIndexArg, this.objIndexArg, this.faceBorderArg, this.material);
     }
 }
 

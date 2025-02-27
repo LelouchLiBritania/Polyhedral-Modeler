@@ -319,6 +319,34 @@ function lte(value1, value2){
     }
 }*/
 
+function arrayToExactMathArray(a){
+    let res = [];
+    a.forEach(e=>{
+        if(typeof(e)=="number"){
+            res.push(N(String(e)));
+        }
+        else{
+            res.push(e);
+        }
+        
+    })
+    return res;
+}
+
+function exactArrayToFloatArray(a){
+    let res = [];
+    a.forEach(e=>{
+        if(typeof(e)!="number"){
+            res.push(e.toNumber());
+        }
+        else{
+            res.push(e);
+        }
+        
+    })
+    return res;
+}
+
 function print(...values){
     let s="";
     values.forEach(value=>{
@@ -339,4 +367,4 @@ function print(...values){
 
 
 
-export {max, min, gt, gte, lt, lte, print}
+export {max, min, gt, gte, lt, lte, print, arrayToExactMathArray, exactArrayToFloatArray}
