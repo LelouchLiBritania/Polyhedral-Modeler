@@ -13,10 +13,14 @@ import { ControllersCollection } from './controllers/controllersCollection.js';
 import { loaders } from './loaders/loaders.js';
 import { ExactMatrix } from './utils/exactMatrix.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { runTests } from './tests.js';
 const w = window;
+const do_test=true;
 
 {
-
+    if(do_test){
+        runTests();
+    }
 
     let screen_split_ratio1 = 1.;
     let screen_split_ratio2 = 1.;

@@ -49,7 +49,7 @@ class VertexData extends THREE.Mesh{
         }
 
         this.geometry.setAttribute( 'center', new Float32ArrayDynamicBufferAttribute( centers, 3, false ) );
-        console.log("centers", this.geometry.getAttribute( 'center'));
+        //console.log("centers", this.geometry.getAttribute( 'center'));
         this.geometry.setAttribute('fIndex', this.fIndex);
         this.geometry.setAttribute('pIndex', this.pIndex);
         //this.geometry.setAttribute('oIndex', this.objIndex);

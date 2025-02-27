@@ -254,6 +254,8 @@ class GeometryBuilder{
         
     }
 
+
+
     /**
      * Tries to correct the plans of the model such that it 
      * correspond to the geometry. 
@@ -281,8 +283,10 @@ class GeometryBuilder{
         }
 
         while(!facesQueue.isEmpty()){
-            console.log(PriorityFace.toString());
+            //console.log(PriorityFace.toString());
+            //console.log([...PriorityFace.instances]);
             let face = facesQueue.pop();
+            //console.log(face.id, face.points_id, facesQueue.toArray());
             let fixedPoints = face.getFixedPoints();
             if(fixedPoints.length>1){
                 let d4;
@@ -339,7 +343,7 @@ class GeometryBuilder{
             }
             else if(fixedPoints.length==1){
                 let p_id = fixedPoints[0];
-                console.log("face "+face.id+" position constrained by point "+p_id);
+                //console.log("face "+face.id+" position constrained by point "+p_id);
                 let plans = PriorityFace.constraints[p_id].slice(0,3);
                 let equations = [];
                 plans.forEach(plan=>{
@@ -376,14 +380,11 @@ class GeometryBuilder{
 
             face.points_id.forEach(p_id=>{
                 let plans = PriorityFace.constraints[p_id];
-                let equations = [[...controller.faceData.planeEquation[face.id]]];
+                /*let equations = [[...controller.faceData.planeEquation[face.id]]];
                 plans.forEach(plan=>{
                     equations.push([...controller.faceData.planeEquation[plan]]);
-                })
-                let A1 = new ExactMatrix(equations);
-                if(A1.rank()==4){
-                    PriorityFace.constraints[p_id].push(face.id);
-                }
+                })*/
+                PriorityFace.constraints[p_id].push(face.id);
                 //PriorityFace.constraints[p_id].push(face.id);
             })
             PriorityFace.updatePriorities();
@@ -437,7 +438,7 @@ class GeometryBuilder{
 
 class PriorityFace{
     instances = [];
-    constraints = [];
+    constraints = []; //
     
     constructor(f_id, points){
         this.priority = 0;
