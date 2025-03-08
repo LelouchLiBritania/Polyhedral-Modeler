@@ -1,6 +1,6 @@
 import { Point3D, Polygon, LinearRing, MultiSurface } from "../CityGMLGeometricModel";
 import { VertexData, TriangleData } from "../graphicalModels";
-import { PointData, FaceData, HalfEdgeData, EdgeData } from "../GeometricalProxy";
+import { PointData, FaceData, HalfEdgeData, EdgeData } from "../HalfEdgeDataStructure";
 import { Building, BuildingPart, ClosureSurface, WallSurface, FloorSurface, OuterFloorSurface, GroundSurface, RoofSurface } from "../CityGMLLogicalModel";
 import { Controller, DualController } from "../controllers/controller";
 import * as Utils from '../utils/utils';
@@ -254,6 +254,39 @@ class GeometryBuilder{
         
     }
 
+
+
+    correctPlans2(controller){
+        let difficultFaces = [];
+        for(let i=0; i<controller.faceData.count; i++){
+            let h_ext=controller.faceData.hExtIndex[i][0];
+            let h = h_ext;
+            let n_overconstrained_vertices=0;
+            do{
+                let v = controller.halfEdgeData.vertex(h);
+                let faces = controller.findAdjacentFaces(v);
+                if(faces.length>4){
+                    n_overconstrained_vertices+=1;
+                    if(n_overconstrained_vertices>=4){
+                        difficultFaces.push(i);
+                        break;
+                    }
+                }
+                h=controller.halfEdgeData.next(h);
+            }while(h!=h_ext)
+        }
+
+        for(let i=0; i<difficultFaces.length; i++){
+            let face = difficultFaces[i];
+            let [a,b,c,d] = estimatePlanEquationLC(controller, face);
+            controller.faceData.planeEquation[face] = [a,b,c,d];
+        }
+        
+    }
+
+
+
+    
 
 
     /**
