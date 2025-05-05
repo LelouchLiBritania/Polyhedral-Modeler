@@ -1,17 +1,20 @@
 import { Point3D, Polygon, LinearRing, MultiSurface } from "../CityGMLGeometricModel";
 import { VertexData, TriangleData } from "../graphicalModels";
-import { PointData, FaceData, HalfEdgeData, EdgeData } from "../HalfEdgeDataStructure";
+import { PointData, FaceData, HalfEdgeData, EdgeData } from "../GeometricalProxy";
 import { Building, BuildingPart, ClosureSurface, WallSurface, FloorSurface, OuterFloorSurface, GroundSurface, RoofSurface } from "../CityGMLLogicalModel";
 import { Controller, DualController } from "../controllers/controller";
 import * as Utils from '../utils/utils';
+import * as GeomUtils from '../utils/3DGeometricComputes'
 import { Heap } from 'heap-js';
 import { ExactNumber as N } from "exactnumber/dist/index.umd";
 import { ExactMatrix } from "../utils/exactMatrix";
+import { isTopologicallyValid } from "../validityCheck";
+import { exactArrayToFloatArray } from "../utils/exactMathUtils";
 
 
 
 class GeometryBuilder{
-    constructor(){
+    constructor(correctionType = 2){
         this.face_data            = {};
         this.point_data           = {};
         this.halfedge_data        = {};
@@ -19,6 +22,12 @@ class GeometryBuilder{
         this.face_data_object     = {};
         this.point_data_object    = {};
         this.GMLModel     = {};
+        if(correctionType==1){
+            this.algoCorrection = this.correctPlans
+        }
+        else{
+            this.algoCorrection = this.correctPlans2
+        }
     } 
     build(building, LoD){
         let minPointId = building.minPointId;
@@ -257,6 +266,7 @@ class GeometryBuilder{
 
 
     correctPlans2(controller){
+        console.log("CORRECT PLANES 2");
         let difficultFaces = [];
         for(let i=0; i<controller.faceData.count; i++){
             let h_ext=controller.faceData.hExtIndex[i][0];
@@ -277,13 +287,86 @@ class GeometryBuilder{
         }
 
         for(let i=0; i<difficultFaces.length; i++){
+            console.log("----> difficult face : ",i)
             let face = difficultFaces[i];
-            let [a,b,c,d] = estimatePlanEquationLC(controller, face);
+            let coords = [];
+            let h_ext=controller.faceData.hExtIndex[i][0];
+            let h = h_ext;
+            do{
+                let v = controller.halfEdgeData.vertex(h);
+                coords.push(controller.pointData.coords[v]);
+                
+                h=controller.halfEdgeData.next(h);
+            }while(h!=h_ext)
+            let [a,b,c,d] = GeomUtils.estimatePlanEquationLCconstrained(coords);
             controller.faceData.planeEquation[face] = [a,b,c,d];
         }
+
+        for(let i=0; i<controller.pointData.count; i++){
+            let faces = controller.findAdjacentFaces(i);
+            if(faces.length>=4){
+                let difficultAdjacentFaces = Utils.getCommonElts(faces, difficultFaces);
+                let n_difficultAdjacentFaces = difficultAdjacentFaces.length;
+                if(n_difficultAdjacentFaces>3){
+                    throw new Error("Impossible to correct the import, to many constraint a difficult vertex.");
+                }
+                else if(n_difficultAdjacentFaces==3){
+                    console.log("---->Projecting point", i, "on intersection of 3 planes.");
+                    let plan1 = controller.faceData.planeEquation[difficultAdjacentFaces[0]];
+                    let plan2 = controller.faceData.planeEquation[difficultAdjacentFaces[1]];
+                    let plan3 = controller.faceData.planeEquation[difficultAdjacentFaces[2]];
+                    let coords = GeomUtils.computeIntersectionPoint2(plan1, plan2, plan3);
+                    controller.pointData.coords[i]= coords;
+                }
+                else if(n_difficultAdjacentFaces==2){
+                    console.log("---->Projecting point", i, "on intersection of 2 planes.");
+                    let plan1 = controller.faceData.planeEquation[difficultAdjacentFaces[0]];
+                    let plan2 = controller.faceData.planeEquation[difficultAdjacentFaces[1]];
+                    let input_coords = controller.pointData.coords[i];
+
+                    let line = GeomUtils.computeIntersectionLine(plan1, plan2);
+                    let coords = GeomUtils.projectPointOnLine(input_coords, line);
+                    controller.pointData.coords[i]= coords;
+                }
+                else if(n_difficultAdjacentFaces==1){
+                    console.log("---->Projecting point", i, "on intersection of 1 planes.");
+                    let plan1 = controller.faceData.planeEquation[difficultAdjacentFaces[0]];
+                    let input_coords = controller.pointData.coords[i];
+
+                    let coords = GeomUtils.projectPointOnPlane(input_coords, plan1);
+                    controller.pointData.coords[i]= coords;
+                }
+            }
+        }
+
+        for(let i=0; i<controller.faceData.count; i++){
+            if(difficultFaces.indexOf(i)==-1){
+                //console.log("----> other face ",i)
+                let fixed_coords = [];
+                let other_coords = [];
+                let h_ext=controller.faceData.hExtIndex[i][0];
+                let h = h_ext;
+                do{
+                    let v = controller.halfEdgeData.vertex(h);
+                    let faces = controller.findAdjacentFaces(v);
+                    if(faces.length>=4){
+                        fixed_coords.push(controller.pointData.coords[v]);
+                    }
+                    else{
+                        other_coords.push(controller.pointData.coords[v]);
+                    }
+                    h=controller.halfEdgeData.next(h);
+                }while(h!=h_ext)
+                console.log("----> other face ",i, exactArrayToFloatArray(controller.faceData.planeEquation[i]));
+                controller.faceData.planeEquation[i] = GeomUtils.estimatePlanEquationLCconstrained(other_coords, fixed_coords);
+                console.log("---->              ", exactArrayToFloatArray(controller.faceData.planeEquation[i]));
+            }
+        }
+
+        controller.reorientNormals();
+        isTopologicallyValid(controller);
         
     }
-
 
 
     
@@ -295,6 +378,7 @@ class GeometryBuilder{
      * @param {Controller} controller 
      */
     correctPlans(controller){
+        PriorityFace.controller = controller;
         PriorityFace.instances = [];
         PriorityFace.constraints = new Array(controller.pointData.count);
         for(let i=0; i<PriorityFace.constraints.length; i++){
@@ -328,12 +412,15 @@ class GeometryBuilder{
                 for(let i=0; i<fixedPoints.length; i++){
                     let p_id = fixedPoints[i];
                     
-                    let plans = PriorityFace.constraints[p_id].slice(0,3);
+                    let plans = PriorityFace.constraints[p_id];
                     let equations = [];
                     plans.forEach(plan=>{
                         equations.push([...controller.faceData.planeEquation[plan]]);
                     })
                     equations.push([...controller.faceData.planeEquation[face.id]]);
+                    let M_eq = new ExactMatrix(equations);
+                    let M_eq_reduced = M_eq.reducedMatrix();
+                    equations = M_eq_reduced.values;
                     let values1 = [[...equations[1].slice(0,3)],[...equations[2].slice(0,3)],[...equations[3].slice(0,3)]];
                     let values2 = [[...equations[0].slice(0,3)],[...equations[2].slice(0,3)],[...equations[3].slice(0,3)]];
                     let values3 = [[...equations[0].slice(0,3)],[...equations[1].slice(0,3)],[...equations[3].slice(0,3)]];
@@ -377,12 +464,15 @@ class GeometryBuilder{
             else if(fixedPoints.length==1){
                 let p_id = fixedPoints[0];
                 //console.log("face "+face.id+" position constrained by point "+p_id);
-                let plans = PriorityFace.constraints[p_id].slice(0,3);
+                let plans = PriorityFace.constraints[p_id];
                 let equations = [];
                 plans.forEach(plan=>{
                     equations.push([...controller.faceData.planeEquation[plan]]);
                 })
                 equations.push([...controller.faceData.planeEquation[face.id]]);
+                let M_eq = new ExactMatrix(equations);
+                let M_eq_reduced = M_eq.reducedMatrix();
+                equations = M_eq_reduced.values;
                 let values1 = [[...equations[1].slice(0,3)],[...equations[2].slice(0,3)],[...equations[3].slice(0,3)]];
                 let values2 = [[...equations[0].slice(0,3)],[...equations[2].slice(0,3)],[...equations[3].slice(0,3)]];
                 let values3 = [[...equations[0].slice(0,3)],[...equations[1].slice(0,3)],[...equations[3].slice(0,3)]];
@@ -426,6 +516,67 @@ class GeometryBuilder{
         
     }
 
+
+        /**
+     * Recherche les sommets n'étant adjacent qu'à 2 faces, et les supprimes.
+     * @param {Controller} controller 
+     */
+        reapairTopology(controller){
+            for(let i=0; i<controller.pointData.count; i++){
+                let faces = controller.findAdjacentFaces(i);
+                if(faces.length<=2){
+                    //Get components
+                    let [h0,h1] = controller.pointData.getAdjacentHalfEdges(i,controller.halfEdgeData);
+                    
+                    let h0_o = controller.halfEdgeData.opposite(h0);
+                    let h1_o = controller.halfEdgeData.opposite(h1);
+    
+                    let h1_op = controller.halfEdgeData.previous(h1_o);
+                    let h1_n  = controller.halfEdgeData.next(h1);
+    
+                    let v1 =controller.halfEdgeData.vertex(h1_o);
+                    
+                    let f0 = controller.halfEdgeData.fIndex[h0];
+                    let f1 = controller.halfEdgeData.fIndex[h1];
+                    
+                    let e = controller.halfEdgeData.eIndex[h1];
+                    //Change pointers
+                    controller.halfEdgeData.pIndex[h0] = v1;
+                    controller.halfEdgeData.nextIndex[h1_op] = h0;
+                    controller.halfEdgeData.nextIndex[h0_o] = h1_n;
+    
+                    controller.pointData.heIndex[v1][0]=h0;
+                    if(controller.faceData.hExtIndex[f0][0]==h1_o){
+                        controller.faceData.heIndex[f0][0]=h0;
+                    }
+                    for(let j=0; j<controller.faceData.hIntIndices; i++){
+                        if(controller.faceData.hIntIndices[f0][j]==h1_o){
+                            controller.faceData.hIntIndices[f0][j]=h0;
+                        }
+                    }
+    
+                    if(controller.faceData.hExtIndex[f1][0]==h1){
+                        controller.faceData.heIndex[f1][0]=h0_o;
+                    }
+                    for(let j=0; j<controller.faceData.hIntIndices; i++){
+                        if(controller.faceData.hIntIndices[f1][j]==h1){
+                            controller.faceData.hIntIndices[f1][j]=h0_o;
+                        }
+                    }
+                    
+    
+                    //Deletion
+                    controller.deletePoint(i);
+                    controller.deleteHalfEdge(max(h1, h1_o));
+                    controller.deleteHalfEdge(min(h1, h1_o));
+                    controller.deleteEdge(e);
+                    i--;
+    
+                }
+            }
+    
+        }
+
     /**
      * 
      * @returns A Controller object corresponding to this scene.
@@ -434,7 +585,9 @@ class GeometryBuilder{
         let c;
         /*try{*/
             c = new Controller(this.face_data_object, this.point_data_object, this.halfedge_data_object, this.edge_data_object, this.LoD, material);
-            this.correctPlans(c);
+            //this.reapairTopology(c);
+            this.algoCorrection(c);
+            c.updateCoords();
             c.onChange();
             return (c);
         /*}
@@ -471,7 +624,8 @@ class GeometryBuilder{
 
 class PriorityFace{
     instances = [];
-    constraints = []; //
+    constraints = [];
+    controller = null;
     
     constructor(f_id, points){
         this.priority = 0;
@@ -495,11 +649,21 @@ class PriorityFace{
     getFixedPoints(){
         let fixedPoints = [];
         this.points_id.forEach(p_id=>{
-            if(PriorityFace.constraints[p_id].length>=3){
+            if(PriorityFace.getNbConstraints(p_id)>=3){
                 fixedPoints.push(p_id);
             }
         })
         return fixedPoints;
+    }
+
+    static getNbConstraints(p_id){
+        let planes = PriorityFace.constraints[p_id];
+        let equations = [];
+        planes.forEach(plan=>{
+            equations.push([...PriorityFace.controller.faceData.planeEquation[plan]]);
+        })
+        let M = new ExactMatrix(equations);
+        return M.rank();
     }
 
     static toString(){

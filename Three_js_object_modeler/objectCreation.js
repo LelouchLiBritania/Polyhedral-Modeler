@@ -425,6 +425,35 @@ let double_triangle = {
 }
 
 
+//Pyramide with vertices to remove
+
+let p_vertToRemove = {
+    'points':[
+        [-5, 5 ,  5],
+        [ 5, 5 ,  5],
+        [-5, 5 , -5],
+        [ 5, 5 , -5],
+        [ 0, 10,  0],
+        [ 0, 5 ,  5],
+        [-5, 5 ,  0],
+        [ 0, 5 , -5],
+        [ 5, 5 ,  0]
+    ],
+    'faces':[
+        [[0,5,1,6,3,7,2,8],[]],
+        [[0,4,1,5],[]],
+        [[1,4,3,6],[]],
+        [[0,8,2,4],[]],
+        [[2,7,3,4],[]]
+    ]
+}
+
+let pyramid_withVertToRemove = {
+    'buildingParts':[
+        p_vertToRemove
+    ]
+}
+
 
 let mock_builds = {"Pyramid":[pyramid], 
                   "TPyramid":[truncated_pyramide],
@@ -435,6 +464,7 @@ let mock_builds = {"Pyramid":[pyramid],
                   "house_noised2":[houses_noised2],
                   "pyramid_noised":[pyramid_noised],
                   "house_underconstrained":[house_underconstrained],
-                  "double_triangle":[double_triangle]
+                  "double_triangle":[double_triangle],
+                  "pyramid_VertToRemove":[pyramid_withVertToRemove]
                 };
 export {mock_builds}

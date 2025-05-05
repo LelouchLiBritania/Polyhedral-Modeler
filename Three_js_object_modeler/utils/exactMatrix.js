@@ -9,7 +9,7 @@ class ExactMatrix{
     constructor(values){
         this.values=[];
         this.h = values.length;
-        this.l = values[0].length;
+        this.l = values[0] ? values[0].length : 0;
         values.forEach(row=>{
             if(row.length!=this.l){
                 throw new Error("Can't create matrix with non constant length rows");
@@ -43,6 +43,65 @@ class ExactMatrix{
                     return obj[key] = value
             }*/
         })
+    }
+
+    pushColumn(col){
+        if(this.h==0 && this.l==0){
+            this.l+=1;
+            this.h = col.length;
+            for(let i=0; i<this.h; i++){
+                let value = col[i];
+                if(typeof(value)=='number'){
+                    this.values.push([N(String(value))]);
+                }
+                else{
+                    this.values.push([value]);
+                }
+            }
+        }
+        else if(col.length!=this.h){
+            throw new Error("Bad column height.");
+        }
+        else{
+            this.l+=1;
+            for(let i=0; i<this.h; i++){
+                let value = col[i];
+                if(typeof(value)=='number'){
+                    this.values[i].push(N(String(value)));
+                }
+                else{
+                    this.values[i].push(value);
+                }
+            }
+        }
+    }
+
+    pushLine(line){
+        if(this.h==0 && this.l==0){
+            this.h+=1;
+            this.l = line.length;
+            for(let i=0; i<this.l; i++){
+                let value = line[i];
+                if(typeof(value)=='number'){
+                    line[i] = N(String(value));
+                }
+            }
+            this.values.push(line);
+        }
+        if(line.length!=this.l){
+            throw new Error("Bad line height.");
+        }
+        else{
+            this.h+=1;
+            for(let i=0; i<this.l; i++){
+                let value = line[i];
+                if(typeof(value)=='number'){
+                    line[i] = N(String(value));
+                }
+            }
+            this.values.push(line);
+        }
+
     }
 
     
@@ -319,7 +378,10 @@ class ExactMatrix{
 
 
     /**
-     * Computes the rank of the matrix using the Gauss Jordan algorithm.
+     * 
+     * @param {*} D 
+     * @param {*} p 
+     * @returns The solution of the problem MX+D = 0
      */
     solve(D, p=false){
         let r=-1;

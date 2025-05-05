@@ -189,6 +189,7 @@ class CityJSONModelBuilder extends ModelBuilder{
                 }
                 catch(error){
                     console.error("Building "+i+" could not be imported due to "+error);
+                    console.error(error.stack);
                 }
                 this.buildings.push(new Building(buildingParts));
             }

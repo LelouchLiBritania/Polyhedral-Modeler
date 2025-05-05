@@ -10,11 +10,19 @@ import { mock_builds } from './objectCreation.js';
 import * as ExactMathUtils from './utils/exactMathUtils';
 import { loaders } from './loaders/loaders.js';
 import { ControllersCollection } from "./controllers/controllersCollection.js";
-import { dualMaterial, pointsMaterial } from "./materials/materials";
+import { buildingNotSelectedMaterial, dualMaterial, pointsMaterial } from "./materials/materials";
 import { isTopologicallyValid } from "./validityCheck.js";
+import { CityJSONParser } from "./Parser";
+import { CityJSONModelBuilder } from "./Builders/ModelBuilder.js";
+import { GeometryBuilder } from "./Builders/GeometryBuilders.js";
+import { Point3D } from "./CityGMLGeometricModel.js";
 
 let tests = [];
 let funcTests = [];
+let performanceTests = [];
+
+let test_file = "data_test/marseille_periurbain.json";
+let do_perf_tests = true;
 
 function runTests(){
     tests.forEach(test=>{
@@ -23,7 +31,11 @@ function runTests(){
     funcTests.forEach(test=>{
         runTest(test,1);
     });
-    
+    if(do_perf_tests){
+        performanceTests.forEach(test=>{
+            runTest(test,2);
+        });
+    }
 }
 
 function runTest(test, type){
@@ -42,6 +54,24 @@ function runTest(test, type){
         else{
             console.info("%csucceed at test "+test.name, "color : blue; background-color: rgb(167, 179, 252)")
         }
+    }
+    else if(type==2){
+        let test_promise = test();
+        test_promise.then(res=>{
+            console.log(res);
+            console.info("%cPerformance at test "+test.name+" : "+res.success+" success over "+res.total+" elements\n"+
+                "time : "+res.total_time/1000, "color : blue; background-color: rgb(235, 167, 252)");
+            console.info(res.times, "color : blue; background-color: rgb(235, 167, 252)");
+            console.info(res.errors, "color : blue; background-color: rgb(235, 167, 252)");
+            let a = document.createElement("a");
+            let file = new Blob([JSON.stringify(res)], {type: "application/json"});
+            a.href = URL.createObjectURL(file);
+            a.download = test.name+"_results";
+            a.click();
+        })
+
+
+            
     }
 }
 
@@ -383,8 +413,6 @@ function funcTestFaceDegenToEdge(){
     let l0 = controller.edgeSquareLengthExact(e0);
     let l1 = controller.edgeSquareLengthExact(e1);
 
-    console.log(l0.toNumber());
-    console.log(l1.toNumber());
     let valid = l0.isZero() && l1.isZero() && isTopologicallyValid(controller);
 
     //face_deleted = controller.faceShift(5,N(-5));
@@ -428,6 +456,297 @@ function funcTestCreatedFaceFromEdge_move(){
     return false;
 }
 //funcTests.push(funcTestCreatedFaceFromEdge_move);
+
+
+
+/**
+ * Tests if the default embedded plan of a vertex pass through the 3D point associated to the vertex.
+ * @returns
+ */
+function testMatrices(){
+    
+    let values = [[5,0,-10,1],[1,-3,6.5,1],[-7,4,-6,1]];
+    let M = new ExactMatrix(values);
+    let reduced_M = M.reducedMatrix();
+    reduced_M.print();
+
+
+    values = [[5,0,-7.5,1],[1,-3,9,1],[-7,4,-3.5,1]];
+    M = new ExactMatrix(values);
+    reduced_M = M.reducedMatrix();
+    reduced_M.print();
+
+    console.log(reduced_M[2][2].toNumber(),reduced_M[2][3].toNumber());
+
+
+    return true;
+
+    
+}
+tests.push(testMatrices);
+
+
+
+/**
+ * Tests if the default embedded plan of a vertex pass through the 3D point associated to the vertex.
+ * @returns
+ */
+function testRepairAlgo(){
+    
+    //Testing on a degenerated cube, with auto intersection on two opposite sides
+    const mockName = "pyramid_VertToRemove";
+    let controllers=new ControllersCollection([],0,new THREE.Scene(),new THREE.Scene(),new THREE.Scene(),dualMaterial.clone(),pointsMaterial.clone());
+    if(mockName!=""){
+        loaders.MockLoader.loadObject(mock_builds[mockName], controllers);
+    }
+
+    let controller = controllers.controllers[0];
+    
+    let valid = controller.pointData.count==5;
+    for(let i=0; i<controller.pointData.count; i++){
+        valid = valid&&(controller.findAdjacentFaces(i).length>=3);
+    }
+
+    return valid;
+
+    
+}
+tests.push(testRepairAlgo);
+
+
+
+
+
+
+function performanceTestImportAlgo1(){
+    let parser = new CityJSONParser();
+    let cityJSON_promise = parser.loadFile(test_file)
+    let success = 0;
+    let total = 0;
+
+    let perf_test = cityJSON_promise.then(cityJSON_array=>{
+        let i=0;
+        let n = cityJSON_array.length;
+        let times = [];
+        let errors = [];
+        let shifts = []
+        let time_begin = Date.now();
+        cityJSON_array.forEach(cityJSON_object=>{
+            console.log("building "+i+"/"+n);
+            i++;
+            let cityJSONbuilder = new CityJSONModelBuilder();
+            cityJSONbuilder.build(cityJSON_object);
+            let buildings = cityJSONbuilder.getBuildings();
+            let geometryBuilder = new GeometryBuilder(1);
+            buildings.forEach(building=>{
+                total++;
+                let time = Date.now();
+                let time_stop = 0;
+                try{
+                    geometryBuilder.build(building,3);//TO DO : Gérer le LOD
+                    let geometricalController = geometryBuilder.getScene(buildingNotSelectedMaterial);
+                    time_stop = Date.now();
+                    if(isTopologicallyValid(geometricalController)){
+                        success+=1;
+                        let vertices_shift = [];
+                        let building_vertices = Point3D.pointsList.slice(building.minPointId, building.maxPointId+1);
+                        let n_deleted=0;
+                        for(let i=0; i<building_vertices.length; i++){
+                            if(geometricalController.deleted_vertices.indexOf(i)==-1){
+                                let input_point = building_vertices[i];
+                                let res_coords = geometricalController.computeExactCoords(i-n_deleted);
+
+                                let dx   = input_point.x.sub(res_coords[0]);
+                                let dy   = input_point.y.sub(res_coords[1]);
+                                let dz   = input_point.z.sub(res_coords[2]);
+                                let dl_2 = dx.mul(dx).add(dy.mul(dy)).add(dz.mul(dz));
+                                vertices_shift.push({
+                                    'dx' : dx.toNumber(),
+                                    'dy' : dy.toNumber(),
+                                    'dz' : dz.toNumber(),
+                                    'dl' : Math.sqrt(dl_2.toNumber())
+                                });
+                            }
+                            else{
+                                n_deleted+=1;
+                            }
+                            
+                        }
+                        shifts.push(vertices_shift);
+
+                    }
+                    else{
+                        time_stop = Date.now();
+                        console.warn("Building corrected successfully, but result not valid.")
+                        errors.push({
+                            "building":building.id,
+                            "error_type":"BadTopology"
+                        });
+                    }
+                    times.push(time_stop-time);
+                    return 1;
+                }
+                catch(error){
+                    times.push(Date.now()-time);
+                    errors.push({
+                        "building":building.id,
+                        "error_type":error.message,
+                        "stack":error.stack
+                    });
+                    return 0;
+                }
+            }) 
+        })
+        let totalTime = Date.now()-time_begin;
+        let res = {
+            "success":success,
+            "fails":total-success,
+            "total":total,
+            "times":times,
+            "total_time":totalTime,
+            "errors":errors,
+            "shifts":shifts
+        }
+        return res;
+    })
+    
+
+
+
+    return perf_test;
+}
+
+performanceTests.push(performanceTestImportAlgo1)
+
+
+function performanceTestImportAlgo2(){
+    let parser = new CityJSONParser();
+    let cityJSON_promise = parser.loadFile(test_file)
+    let success = 0;
+    let total = 0;
+
+    let perf_test = cityJSON_promise.then(cityJSON_array=>{
+        let i = 0;
+        let n = cityJSON_array.length;
+        let times = [];
+        let errors = [];
+        let shifts = [];
+        let time_begin = Date.now();
+        cityJSON_array.forEach(cityJSON_object=>{
+            console.log("building "+i+"/"+n);
+            i++;
+            let cityJSONbuilder = new CityJSONModelBuilder();
+            cityJSONbuilder.build(cityJSON_object);
+            let buildings = cityJSONbuilder.getBuildings();
+            let geometryBuilder = new GeometryBuilder(2);
+            buildings.forEach(building=>{
+                total++;
+                let time = Date.now();
+                let time_stop = 0;
+                try{
+                    geometryBuilder.build(building,3);//TO DO : Gérer le LOD
+                    let geometricalController = geometryBuilder.getScene(buildingNotSelectedMaterial);
+                    time_stop = Date.now();
+                    if(isTopologicallyValid(geometricalController)){
+                        success+=1;
+                        let vertices_shift = [];
+                        let building_vertices = Point3D.pointsList.slice(building.minPointId, building.maxPointId+1);
+
+                        for(let i=0; i<building_vertices.length; i++){
+                            let input_point = building_vertices[i];
+                            let res_coords = geometricalController.computeExactCoords(i);
+                            let dx   = input_point.x.sub(res_coords[0]);
+                            let dy   = input_point.y.sub(res_coords[1]);
+                            let dz   = input_point.z.sub(res_coords[2]);
+                            let dl_2 = dx.mul(dx).add(dy.mul(dy)).add(dz.mul(dz));
+
+                            vertices_shift.push({
+                                'dx' : dx.toNumber(),
+                                'dy' : dy.toNumber(),
+                                'dz' : dz.toNumber(),
+                                'dl' : Math.sqrt(dl_2.toNumber())
+                            })
+                        }
+                        shifts.push(vertices_shift);
+                    }
+                    else{
+                        time_stop = Date.now();
+                        console.warn("Building corrected successfully, but result not valid.")
+                        errors.push({
+                            "building":building.id,
+                            "error_type":"BadTopology"
+                        });
+                    }
+                    times.push(time_stop-time);
+                    return 1;
+                }
+                catch(error){
+                    times.push(Date.now()-time); 
+                    errors.push({
+                        "building":building.id,
+                        "error_type":error.message,
+                        "stack":error.stack
+                    });
+                    return 0;
+                }
+            }) 
+        })
+        let totalTime = Date.now()-time_begin;
+        let res = {
+            "success":success,
+            "fails":total-success,
+            "total":total,
+            "times":times,
+            "total_time":totalTime,
+            "errors":errors,
+            "shifts":shifts
+        }
+        return res;
+    })
+    return perf_test;
+}
+
+performanceTests.push(performanceTestImportAlgo2)
+
+
+function datasetMetrics(){
+    let parser = new CityJSONParser();
+    let cityJSON_promise = parser.loadFile(test_file);
+    let n_overconstrained_points = 0;
+    let n_not_planar_faces = 0;
+
+    let perf_test = cityJSON_promise.then(cityJSON_array=>{
+        let i = 0;
+        let n = cityJSON_array.length;
+        let times = [];
+        let errors = [];
+        let time_begin = Date.now();
+        cityJSON_array.forEach(cityJSON_object=>{
+            console.log("building "+i+"/"+n);
+            i++;
+            let cityJSONbuilder = new CityJSONModelBuilder();
+            cityJSONbuilder.build(cityJSON_object);
+            let buildings = cityJSONbuilder.getBuildings();
+            buildings.forEach(building=>{
+                
+            }) 
+        })
+        let totalTime = Date.now()-time_begin;
+        let res = {
+            "success":success,
+            "fails":total-success,
+            "total":total,
+            "times":times,
+            "total_time":totalTime,
+            "errors":errors
+        }
+        return res;
+    })
+    return perf_test;
+}
+
+//performanceTests.push(datasetMetrics)
+
 
 
 

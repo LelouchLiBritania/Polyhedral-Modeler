@@ -123,7 +123,15 @@ class LinearRing{
                         this.planeEquation = [a,b,c,d];
 
                         this.positions.forEach(p=>{
-                            let dist = Utils.distance_Point_Pl([p.x,p.y,p.z], [a,b,c,d]);
+                            let dist;
+                            try{
+                                dist = Utils.distance_Point_Pl([p.x,p.y,p.z], [a,b,c,d]);
+                            }
+                            catch(error){
+                                console.log(p, [a,b,c,d], this);
+                                console.error(error, error.stack);
+                            }
+                            
                             if (dist.gt(N(LinearRing.epsilon))){
                                 return false;
                             }
@@ -402,6 +410,18 @@ class Polygon extends Surface{
         this.interiors.forEach(int=>{
             this.interiors.reverse();
         })
+    }
+
+    isPlanar(){
+        let values = [];
+        let linear_rings = [this.exterior, ...this.interiors];
+        linear_rings.forEach(ring=>{
+            ring.positions.forEach(point3D=>{
+                values.push([point3D.x,point3D.y,point3D.z,1]);
+            })
+        })
+        let M = ExactMatrix(M);
+        return(M.rank() <= 3);
     }
 
 

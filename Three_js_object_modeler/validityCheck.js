@@ -229,14 +229,15 @@ function isTopologicallyValid(geometricalController){
                 values.push([...geometricalController.edgeData.supportPlanEquation[e]]);
             });
             let M = new ExactMatrix(values);
-            valid = M.rank()==3;
+            let rank = M.rank();
+            valid = rank==3;
             if(!valid){
                 error_point_id = i;
                 break;
             }
         }
         if(!valid){
-            issue = "Adjacent faces does not intersect on point "+error_point_id;
+            issue = "Adjacent faces does not intersect on point "+error_point_id+" (rank="+rank+")";
         }
     }
 

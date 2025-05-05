@@ -376,7 +376,7 @@ function intersects(segment1, segment2){
  */
 function computeIntersectionPoint2(...plans){
     if(plans.length<3){
-        console.error("Underconstrained plan")
+        throw Error("underconstrained Plane")
     }
     else{
     ////Algorithme du pivot de gauss
@@ -467,6 +467,72 @@ function reorganize(A, D, step){
 
 
 
+function computeIntersectionLine(plan1, plan2){
+    let n1 = plan1.slice(0,3);
+    let n2 = plan2.slice(0,3);
+    let v = Utils.crossProduct(n1,n2);
+
+    let coords = computeIntersectionPoint2_exact(plan1, plan2, [...v, N(0)]);
+    return([coords, v]);
+}
 
 
-export {computeTCollision,computeIntersectionPoint2_exact, computeIntersectionPoint2, intersects, checkAutoIntersectionWithLogs, computeToHorizontalMatrix, checkAutoIntersection, triangulate, computeShiftTValidity,findClosestPointToNLines,projectPointOnLine,computeIntersectionPoint}
+function projectPointOnPlane(point, plane){
+    let [a,b,c,d] = plane;
+    let [x0,y0,z0] = point;
+    let t = d.neg().sub(a.mul(x0).add(b.mul(y0)).add(c.mul(z0))).div(a.mul(a).add(b.mul(b)).add(c.mul(c)));
+    let x = x0.add(a.mul(t));
+    let y = y0.add(b.mul(t));
+    let z = z0.add(c.mul(t));
+    return [ x,y,z]
+}
+
+
+
+function estimatePlanEquationLCconstrained(coords, fixed_coords=[]){
+    return(estimatePlanEquationLCconstrained_v1(coords, fixed_coords));
+}
+
+
+function estimatePlanEquationLCconstrained_v1(coords, fixed_coords){
+    if(coords.length+fixed_coords.length<3){
+        throw new Error("Not enough points to estimate the plan.");
+    }
+    else{
+        let values = [];
+        fixed_coords.forEach(coord=>{
+            values.push([...coord, 1]);
+        })
+        let M = new ExactMatrix(values);
+        let r = M.rank();
+        if(r>3){
+            throw new Error("Too many fixed plans to estimate the plan.");
+        }
+        while(r<3 && coords.length!=0){
+            let coord = coords.pop();
+            M.pushLine([...coord,1]);
+            r=M.rank();
+        }
+        let A = M.reducedMatrix();
+        let a,b,c,d;
+        
+        if(A[2][2].isZero()){
+            d = N(0);
+            c = N(1);
+            b = A[1][2].neg();
+            a = A[0][2].neg();
+        }
+        else{
+            d = N(1);
+            c = A[2][3].neg();
+            b = A[1][3].neg();
+            a = A[0][3].neg();
+        }
+
+        return ([a,b,c,d]);
+    }
+}
+
+
+
+export {estimatePlanEquationLCconstrained, projectPointOnPlane, computeIntersectionLine, computeTCollision,computeIntersectionPoint2_exact, computeIntersectionPoint2, intersects, checkAutoIntersectionWithLogs, computeToHorizontalMatrix, checkAutoIntersection, triangulate, computeShiftTValidity,findClosestPointToNLines,projectPointOnLine,computeIntersectionPoint}

@@ -36,13 +36,24 @@ class PointData{
 
     getAdjacentHalfEdges(p_id, he_data){
         let halfEdges = [];
-        let current = this.heIndex[p_id];
+        let current = this.heIndex[p_id][0];
         do{
             halfEdges.push(current);
             let opp_he = he_data.opposite(current)
             halfEdges.push(opp_he);
             current = he_data.next(opp_he);
-        }while(current!=this.heIndex[p_id])
+        }while(current!=this.heIndex[p_id][0])
+        return halfEdges;
+    }
+
+    getOutAdjacentHalfEdges(p_id, he_data){
+        let halfEdges = [];
+        let current = this.heIndex[p_id][0];
+        do{
+            halfEdges.push(current);
+            let opp_he = he_data.opposite(current)
+            current = he_data.next(opp_he);
+        }while(current!=this.heIndex[p_id][0])
         return halfEdges;
     }
 

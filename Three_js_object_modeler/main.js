@@ -14,6 +14,7 @@ import { loaders } from './loaders/loaders.js';
 import { ExactMatrix } from './utils/exactMatrix.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { runTests } from './tests.js';
+
 const w = window;
 const do_test=true;
 

@@ -29,6 +29,10 @@ class Controller{
         this.pointData    = pointData;
         this.halfEdgeData = halfEdgeData;
         this.edgeData     = edgeData;
+        this.deleted_vertices = []
+        if(!isCopy && !isDual){
+            this.repairTopology();
+        }
         this.dualController = null;
         this.dualBuilder = new DualBuilder(embeddings["Trivial"]);
         this.isCopy = isCopy;
@@ -38,6 +42,7 @@ class Controller{
         this.leftEvent=null;
         this.rightEvent=null;
         this.snapped = false;
+
         if(!isCopy){
             if(!this.isDual){
                 isTopologicallyValid(this); 
@@ -476,6 +481,9 @@ class Controller{
         let faces = [];
         //console.log(">>>>>>>>>>>>>>>>>", pointId);
         let he_0 = this.pointData.heIndex[pointId][0];
+        
+        
+        
         let he = he_0;
         let i=0;
         do{
@@ -702,9 +710,17 @@ class Controller{
         
         let p=[0,0,0];
         //plans.push(this.pointData.embeddedPlanEquation[point_id]);
-        p = GeomUtils.computeIntersectionPoint2(...plans);
-        //console.warn("underconstrained plans : ",faces, " for vertex ", point_id);
+        try{
+            p = GeomUtils.computeIntersectionPoint2(...plans);
+        }
+        catch(error){
+            console.error(error, error.stack);
+            console.warn(point_id,faces, supportEdges);
+            this.printAllFaces();
+        }
         
+        
+        //console.warn("underconstrained plans : ",faces, " for vertex ", point_id);
         
         
         if(isNaN(p[0])){
@@ -728,6 +744,13 @@ class Controller{
             }
         }
         return p;
+    }
+
+
+    updateCoords(){
+        for(let i=0; i<this.pointData.count; i++){
+            this.pointData.coords[i] = this.computeCoords(i);
+        }
     }
 
 
@@ -2134,7 +2157,10 @@ class Controller{
                 let p0 = this.computeCoords(p0_id);
                 let p1 = this.computeCoords(p1_id);
                 let p2 = this.computeCoords(p2_id);
-
+                /*let p0 = ExactMathUtils.exactArrayToFloatArray(this.pointData.coords[p0_id]);
+                let p1 = ExactMathUtils.exactArrayToFloatArray(this.pointData.coords[p1_id]);
+                let p2 = ExactMathUtils.exactArrayToFloatArray(this.pointData.coords[p2_id]);
+                */
                 let v1 = new THREE.Vector3(p0[0]-p1[0],p0[1]-p1[1],p0[2]-p1[2]); //p0-p1
                 let v2 = new THREE.Vector3(p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]); //p2-p1
 
@@ -2163,6 +2189,67 @@ class Controller{
             } 
         }
     }
+
+            /**
+     * Recherche les sommets n'étant adjacent qu'à 2 faces, et les supprimes.
+     */
+    repairTopology(){
+        for(let i=this.pointData.count-1; i>=0; i--){
+            let faces = this.findAdjacentFaces(i);
+            if(faces.length<=2){
+                console.log("==>",i);
+                //Get components
+                let [h0,h1] = this.pointData.getOutAdjacentHalfEdges(i,this.halfEdgeData);
+                
+                let h0_o = this.halfEdgeData.opposite(h0);
+                let h1_o = this.halfEdgeData.opposite(h1);
+
+                let h1_op = this.halfEdgeData.previous(h1_o);
+                let h1_n  = this.halfEdgeData.next(h1);
+
+                let v1 =this.halfEdgeData.vertex(h1_o);
+                
+                let f0 = this.halfEdgeData.fIndex[h0];
+                let f1 = this.halfEdgeData.fIndex[h1];
+                
+                let e = this.halfEdgeData.eIndex[h1];
+                //Change pointers
+                this.halfEdgeData.pIndex[h0] = v1;
+                this.halfEdgeData.nextIndex[h1_op] = h0;
+                this.halfEdgeData.nextIndex[h0_o] = h1_n;
+
+                this.pointData.heIndex[v1][0]=h0;
+                if(this.faceData.hExtIndex[f0][0]==h1_o){
+                    this.faceData.hExtIndex[f0][0]=h0;
+                }
+                for(let j=0; j<this.faceData.hIntIndices; i++){
+                    if(this.faceData.hIntIndices[f0][j]==h1_o){
+                        this.faceData.hIntIndices[f0][j]=h0;
+                    }
+                }
+
+                if(this.faceData.hExtIndex[f1][0]==h1){
+                    this.faceData.hExtIndex[f1][0]=h0_o;
+                }
+                for(let j=0; j<this.faceData.hIntIndices; i++){
+                    if(this.faceData.hIntIndices[f1][j]==h1){
+                        this.faceData.hIntIndices[f1][j]=h0_o;
+                    }
+                }
+                
+
+                //Deletion
+                this.deletePoint(i);
+                this.deleteHalfEdge(Math.max(h1, h1_o));
+                this.deleteHalfEdge(Math.min(h1, h1_o));
+                this.deleteEdge(e);
+                this.deleted_vertices.push(i);
+
+            }
+        }
+
+    }
+    
 
     /**
      * Mak a conversion ExactNumber -> Float -> ExactNumber 
