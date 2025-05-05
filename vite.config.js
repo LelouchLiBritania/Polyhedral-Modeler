@@ -1,5 +1,5 @@
 export default {
-    base : '/3D-Viewer/',
+    base : '/Polyhedral-Modeler/',
     build: {
       rollupOptions:{
         external:[]

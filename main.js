@@ -2,18 +2,18 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 
-import { dualMaterial, buildingMaterialDebug, buildingMaterial, pointsMaterial, buildingNotSelectedMaterial } from './materials/materials.js';
+import { dualMaterial, buildingMaterialDebug, buildingMaterial, pointsMaterial, buildingNotSelectedMaterial } from './src/materials/materials.js';
 
-import { mock_builds } from './objectCreation.js';
+import { mock_builds } from './src/objectCreation.js';
 
 
-import { ToolBar } from './tools.js';
-import { CityJSONParser } from './Parser.js';
-import { ControllersCollection } from './controllers/controllersCollection.js';
-import { loaders } from './loaders/loaders.js';
-import { ExactMatrix } from './utils/exactMatrix.js';
+import { ToolBar } from './src/tools.js';
+import { CityJSONParser } from './src/Parser.js';
+import { ControllersCollection } from './src/controllers/controllersCollection.js';
+import { loaders } from './src/loaders/loaders.js';
+import { ExactMatrix } from './src/utils/exactMatrix.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { runTests } from './tests.js';
+import { runTests } from './src/tests.js';
 
 const w = window;
 const do_test=true;
