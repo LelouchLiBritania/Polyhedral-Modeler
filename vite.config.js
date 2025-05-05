@@ -1,10 +1,8 @@
-import { defineConfig } from "vite"
-
-export default defineConfig({
+export default {
     base : '/3D-Viewer/',
-    build:{
+    build: {
       rollupOptions:{
-        external:['regenerator-runtime/runtime']
+        external:[]
       }
     }
-  })
+  }
