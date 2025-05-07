@@ -213,59 +213,48 @@ class HalfEdgeStructure{
 
         //Création of the 2n new halfEdges, the n new edges, 
         //and update of the others, plus the point's halfEdge pointers
-        let halfEdges = [];
+        let exterior_half_edges = [];
+        let interior_half_edges = [];
         he = h;
         let i=0;
-        let newFace_id = this.faceData.count;
-        let n_he = this.halfEdgeData.count;
-        let n    = pointsIds.length;
-        let n_e  = this.edgeData.count;
+        let new_face = new Face(plane, null, []);
+        let n        = vertices.length;
         do{
             halfEdges.push(this.halfEdgeData.count,this.halfEdgeData.count+1);
-            let he_o = this.halfEdgeData.opposite(he);
-            let he_on = this.halfEdgeData.next(he_o);
+            
+            
+            let he_o = he.opposite;
+            let he_on = he_o.next;
             //f_id of the external he
-            let f_id = this.halfEdgeData.fIndex[he_on];
-            //opposites id
-            let oppId1 = this.halfEdgeData.count-1;
-            if(i==0){
-                oppId1 = this.halfEdgeData.count+(2*n-1)
-            }
-            let oppId2 = this.halfEdgeData.count+2;
-            if(i==n-1){
-                oppId2 = this.halfEdgeData.count-(2*(n-1))
-            }
-            //next id
-            let nextId1 = this.halfEdgeData.count-2;
-            if(i==0){
-                nextId1 = this.halfEdgeData.count+(2*(n-1));
-            }
-
-            let nextId2 = he_on;
-            /*console.log(this.halfEdgeData.count, "---->",oppId1);
-            console.log(this.halfEdgeData.count+1, "---->", oppId2);
-            */
-            //update
-            this.halfEdgeData.nextIndex[he_o] = this.halfEdgeData.count+1;
-            this.halfEdgeData.pIndex[he] = pointsIds[i];
-            this.pointData.heIndex[pointsIds[i]] = [this.halfEdgeData.count];
-
+            let ext_face = he_o.face;
+           
             //creation
-            this.edgeData.add(this.halfEdgeData.count, [NaN,NaN,NaN,NaN]);
-            this.halfEdgeData.add(pointsIds[i], oppId1, nextId1, newFace_id, n_e+i);
-            this.halfEdgeData.add(pointsIds[i], oppId2, nextId2, f_id, n_e+((i+1)%n));
-            
-            
+            let new_edge = new Edge(null);
+            let new_halfedge_ext = new HalfEdge(vertices[i], null, he_on, ext_face,new_edge);
+            let new_halfedge_int = new HalfEdge(vertices[i], null, null, new_face,null);
+            new_edge.edge = new_halfedge_ext;
+            exterior_half_edges.push(new_halfedge_ext);
+            interior_half_edges.push(new_halfedge_int);
+
+            //update
+            he_o.next = new_halfedge_ext;
+
+            let n = interior_half_edges.length;
+            for(let i=0; i<n; i++){
+                let half_edge_int = interior_half_edges[i];
+                let half_edge_ext = exterior_half_edges[(n+i-1)%n];
+                half_edge_ext.opposite = half_edge_int;
+                half_edge_int.opposite = half_edge_ext;
+                half_edge_int.edge = half_edge_ext.edge;
+                half_edge_int.next = interior_half_edges[(n+i-1)%n];
+            }
             
             he = he_on;
             i++;
         }while(he!=h)
 
-        //Creation of the face
-        this.faceData.add([halfEdges[0]],[],planEquation);
-
-
-    
+        //Update the new face
+        new_face.exteriorHalfEdge = interior_half_edges[0];
     }
 
 
@@ -661,7 +650,7 @@ class HalfEdge{
 }
 
 class Edge{
-    constructor(halfEdge, supportPlane, underconstrained=false){
+    constructor(halfEdge, supportPlane=null, underconstrained=false){
         this.halfEdge = halfEdge;
         this.supportPlane = supportPlane;
         this.embeddedPlane = null;
