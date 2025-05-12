@@ -1,5 +1,5 @@
 import { ExactMathPlane, ExactMathPoint } from "./ExactMathGeometry";
-
+import { ExactNumber as N } from "exactnumber/dist/index.umd";
 
 class HalfEdgeStructure{
     constructor(vertices, halfEdges, edges, faces){
@@ -15,59 +15,17 @@ class HalfEdgeStructure{
         });
     }
 
-    updateSupportPlans(){
-        this.edges.forEach(edge=>{
-            let faces = edge.getAdjacentFaces();
-            let values = [];
-
-            let plane1 = faces[0].plane;
-            let plane2 = faces[1].plane;
-            values.push(plane1.toExactArray());
-            values.push(plane2.toExactArray());
-            
-            let M = new ExactMatrix(values);
-            if(M.rank()<2){
-                edge.underconstrained=true;
-                let [a,b,c,d]=plane1.toExactArray();
-                let n = [a,b,c];
-                let p1 = v1.getPointPosition();
-                let p2 = v2.getPointPosition();
-                let v = [p2[0].sub(p1[0]),p2[1].sub(p1[1]),p2[2].sub(p1[2])];
-                let n_support = Utils.normalize(Utils.crossProduct(n,v));
-                let d_support = Utils.dotProduct(n_support, p1).neg();
-                edge.supportPlane=new ExactMathPlane(...n_support, d_support);
-            }
-            else{
-                edge.underconstrained = false;
-                edge.supportPlane = null;
-            }
-        })
-    }
-
-    updateEmbeddedPlans(){
+    updateEmbeddedPlanes(){
         this.vertices.forEach(vertex=>{
-            if(!vertex.embeddedPlane){
-                vertex.embeddedPlane = vertex.computeDefaultEmbeddedPlan();
-            }
-            let [x,y,z] = vertex.getPointPosition();
-            let [a,b,c,d] = vertex.embeddedPlane.toExactArray();
-            //console.log(i,x,y,z,a,b,c);
-            vertex.embeddedPlane.d = a.neg().mul(x).sub(b.mul(y)).sub(c.mul(z));
+            vertex.embeddedPlaneEquation = vertex.computeEmbeddedPlaneEquation();
         });
-
         this.edges.forEach(edge=>{
-            if(!edge.embeddedPlane){
-                edge.embeddedPlane = edge.computeDefaultEmbeddedPlan();
-            }
-            
-            let [v0,v1] = edge.getAdjacentVertices();
-
-            let [x0,y0,z0] = v0.getPointPosition();
-            let [x1,y1,z1] = v1.getPointPosition();
-            let [a,b,c,d]  = edge.embeddedPlane.toExactArray();
-            let d0 = a.neg().mul(x0).sub(b.mul(y0)).sub(c.mul(z0));
-            let d1 = a.neg().mul(x1).sub(b.mul(y1)).sub(c.mul(z1));
-            edge.embeddedPlane.d = d0.add(d1).div(N(2));
+            edge.embeddedPlaneEquation = edge.computeEmbeddedPlaneEquation();
+        });
+    }
+    updateSupportPlanes(){
+        this.edges.forEach(edge=>{
+            edge.supportPlaneEquation = edge.computeSupportPlaneEquation();
         });
     }
 
@@ -522,6 +480,26 @@ class HalfEdgeStructure{
         });
     }
 
+    clone(){
+        let vertices_clone = []
+        this.vertices.forEach(vertex=>{
+            vertices_clone.push(vertex.clone());
+        });
+        let edges_clone = []
+        this.edges.forEach(edge=>{
+            edges_clone.push(edge.clone());
+        });
+        let halfEdges_clone = []
+        this.halfEdges.forEach(halfEdge=>{
+            halfEdges_clone.push(halfEdge.clone());
+        });
+        let faces_clone = []
+        this.faces.forEach(face=>{
+            faces_clone.push(face.clone());
+        });
+        return(new HalfEdgeStructure(vertices_clone,halfEdges_clone,edges_clone,faces_clone));
+    }
+
 
 }
 
@@ -574,48 +552,21 @@ class Vertex{
 
     getPointPosition(){
 
-        let faces        = this.getAdjacentFaces();
+        let faces = this.getAdjacentFaces();
         let supportEdges = this.getAdjacentSupportEdges();
 
         let planes = [];
         faces.forEach(face=>{
-            planes.push(face.plane());
-        })
-        supportEdges.forEach(edge=>{
-            planes.push(edge.supportPlane);
-        })
-        
-        if(planes.length<3){
-            console.error("Underconstrained plan")
-        }
-        else{
-        ////Algorithme du pivot de gauss
-            let A_values = [];
-            let D_values = [];
-            //Initilisation du système d'équations
-            planes.forEach(plane=>{
-                A_values.push(plane.toExactArray().slice(0,3));
-                D_values.push([plane.toExactArray()[3]]);
-            })
-    
-            let A = new ExactMatrix(A_values);
-            let D = new ExactMatrix(D_values);
-    
-            let res = A.solve(D);
-    
-            //console.log(A, D);
-    
-            if(res.l!=0){
-                return([res[0][0].neg(),res[1][0].neg(),res[2][0].neg()]);
-            }
-            else{
-                return [NaN,NaN,NaN];
-            }
-    
-        }
+            planes.push(face.planEquation);
+        });
+        supportEdges.forEach(edge=>{ 
+            planes.push(edge.supportPlanEquation);
+        });
+
+        return ExactMathPlane.computeIntersectionPoint(...planes);
     }
 
-    computeDefaultEmbeddedPlan(){
+    computeDefaultEmbeddedPlane(){
             
         let faces = this.getAdjacentFaces();
 
@@ -627,6 +578,20 @@ class Vertex{
         plane.div(N(n));
         return(plane);
 
+    }
+
+    computeEmbeddedPlaneEquation(){
+        if(!this.embeddedPlane){
+            this.embeddedPlane = this.computeDefaultEmbeddedPlane();
+        }
+        let [x,y,z] = this.getPointPosition();
+        let [a,b,c,d] = this.embeddedPlane.toExactArray();
+        //console.log(i,x,y,z,a,b,c);
+        this.embeddedPlane.d = a.neg().mul(x).sub(b.mul(y)).sub(c.mul(z));
+    }
+
+    clone(){
+        return new Vertex(this.point.clone(), this.halfEdge.clone(), this.supportPlane?this.supportPlane.clone:null);
     }
 
 }
@@ -647,6 +612,10 @@ class HalfEdge{
         }
         return h;
     }
+
+    clone(){
+        return(new HalfEdge(this.origin.clone(),this.opposite.clone(),this.next.clone(),this.face.clone(),this.edge.clone()));
+    }
 }
 
 class Edge{
@@ -655,6 +624,36 @@ class Edge{
         this.supportPlane = supportPlane;
         this.embeddedPlane = null;
         this.underconstrained = underconstrained;
+    }
+
+    lengthIsZero(){
+        return (this.squareLengthExact().isZero());
+    }
+
+
+    lengthApproximate(){
+        let h = this.halfEdge;
+        let h_o = h.opposite;
+        let v1 = h.origine;
+        let v2 = h_o.origine;
+        
+        let p1 = v1.getPointPosition();
+        let p2 = v2.getPointPosition();
+
+        return p1.distanceApproximate(p2);
+    }
+
+    squareLengthExact(){
+        
+        let h = this.halfEdge;
+        let h_o = h.opposite;
+        let v1 = h.origine;
+        let v2 = h_o.origine;
+        
+        let p1 = v1.getPointPosition();
+        let p2 = v2.getPointPosition();
+
+        return p1.squareDistance(p2);
     }
 
     getAdjacentFaces(){
@@ -687,6 +686,10 @@ class Edge{
         return plane;
 
     }
+
+    clone(){
+        return(new Edge(this.halfEdge.clone(),this.supportPlane?this.supportPlane.clone():null, this.underconstrained));
+    }
 }
 
 class Face{
@@ -694,6 +697,47 @@ class Face{
         this.plane = plane;
         this.exteriorHalfEdge = exteriorHalfEdge;
         this.interiorHalfEdges = interiorHalfEdges;
+    }
+
+    getExteriorBorder(){
+        let borderHalfEdges = [];
+        let h = this.exteriorHalfEdge;
+        do{
+            borderHalfEdges.push(h);
+            h = h.next;
+        }while(h!=this.exteriorHalfEdge)
+        
+        return(borderHalfEdges);
+    }
+
+    getInteriorBorders(){
+        let borderHalfEdges = [];
+        interiorHalfEdges.forEach(interiorHalfEdge=>{
+            let interiorRing = [];
+            let h = interiorHalfEdge;
+            do{
+                interiorRing.push(h);
+                h = h.next;
+            }while(h!=interiorHalfEdge)
+            borderHalfEdges.push(interiorRing);
+        })
+        
+        return(borderHalfEdges);
+    }
+
+    getBorders(){
+        return [this.getExteriorBorder()].concat(this.getInteriorBorders());
+    }
+
+    getAdjacentVertices(){
+        let borders = this.getBorders();
+        let vertices = [];
+        borders.forEach(border=>{
+            border.forEach(halfEdge=>{
+                vertices.push(halfEdge.origin);
+            })
+        })
+        return(vertices);
     }
 }
 

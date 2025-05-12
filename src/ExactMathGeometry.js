@@ -156,6 +156,23 @@ class ExactMathPoint{
             this.z=z;
         }
     }
+
+    distanceApproximate(exactGeom){
+        if(typeof(exactGeom)==ExactMathPoint){
+            let d_2 = this.squareDistance(exactGeom);
+            return(N(String(Math.sqrt(d_2.toNumber()))));
+        }
+    }
+
+    squareDistance(exactGeom){
+        if(typeof(exactGeom)==ExactMathPoint){
+            let dx = this.x.sub(exactGeom.x);
+            let dy = this.y.sub(exactGeom.y);
+            let dz = this.z.sub(exactGeom.z);
+
+            return(dx.mul(dx).add(dy.mul(dy)).add(dz.mul(dz)));
+        }
+    }
 }
 
 export{
