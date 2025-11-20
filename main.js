@@ -2,23 +2,30 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 
-import { dualMaterial, buildingMaterialDebug, buildingMaterial, pointsMaterial, buildingNotSelectedMaterial } from './materials/materials.js';
+import { dualMaterial, buildingMaterialDebug, buildingMaterial, pointsMaterial, buildingNotSelectedMaterial } from './src/materials/materials.js';
 
-import { mock_builds } from './objectCreation.js';
+import { mock_builds } from './src/objectCreation.js';
 
 
-import { ToolBar } from './tools.js';
-import { CityJSONParser } from './Parser.js';
-import { ControllersCollection } from './controllers/controllersCollection.js';
-import { loaders } from './loaders/loaders.js';
-import { ExactMatrix } from './utils/exactMatrix.js';
+import { ToolBar } from './src/tools.js';
+import { CityJSONParser } from './src/Parser.js';
+import { ControllersCollection } from './src/controllers/controllersCollection.js';
+import { loaders } from './src/loaders/loaders.js';
+import { ExactMatrix } from './src/utils/exactMatrix.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { runTests } from './src/tests.js';
+
 const w = window;
+const do_test=true;
 
 {
+    if(do_test){
+        runTests();
+    }
 
-
-    let screen_split_ratio = 1.;
+    let screen_split_ratio1 = 1.;
+    let screen_split_ratio2 = 1.;
+    let nb_windows = 1;
 
     //Pour le debug graphique
     const material_debug = buildingMaterialDebug;
@@ -30,17 +37,17 @@ const w = window;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xcccccc);
-    const camera = new THREE.PerspectiveCamera( 75, (window.innerWidth*screen_split_ratio) / window.innerHeight, 0.1, 100000 );
+    const camera = new THREE.PerspectiveCamera( 75, (window.innerWidth*screen_split_ratio1) / window.innerHeight, 0.1, 100000 );
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth*screen_split_ratio, window.innerHeight );
+    renderer.setSize( window.innerWidth*screen_split_ratio1, window.innerHeight );
     document.body.appendChild( renderer.domElement );
 
 
     let doLabelRebdering = false;
     const labelRenderer = new CSS2DRenderer();
-    labelRenderer.setSize( window.innerWidth*screen_split_ratio, window.innerHeight );
+    labelRenderer.setSize( window.innerWidth*screen_split_ratio1, window.innerHeight );
     
     labelRenderer.domElement.style.position = 'absolute';
     labelRenderer.domElement.style.top = '0px';
@@ -77,11 +84,11 @@ const w = window;
 
     /////////////////////Scene Dual
     const dualRenderer = new THREE.WebGLRenderer({ antialias: true });
-    const dualCamera = new THREE.PerspectiveCamera( 75, window.innerWidth*(1.-screen_split_ratio) / window.innerHeight, 0.1, 1000 );
+    const dualCamera = new THREE.PerspectiveCamera( 75, window.innerWidth*(screen_split_ratio2-screen_split_ratio1) / window.innerHeight, 0.1, 1000 );
     const dualControls = new OrbitControls( dualCamera, dualRenderer.domElement );
 
     dualRenderer.setPixelRatio( window.devicePixelRatio );
-    dualRenderer.setSize( window.innerWidth*(1.-screen_split_ratio), window.innerHeight );
+    dualRenderer.setSize( window.innerWidth*(screen_split_ratio2-screen_split_ratio1), window.innerHeight );
     document.body.appendChild( dualRenderer.domElement );
     dualControls.update();
 
@@ -89,11 +96,30 @@ const w = window;
 
     const dualScene = new THREE.Scene();
     dualScene.background = new THREE.Color(0xbbbbbb);
-    
 
-    let controllers = new ControllersCollection([],3, scene, dualScene, dualMaterial, pointsMaterial);
+
+    /////////////////////Scene Display Image
+    const imageRenderer = new THREE.WebGLRenderer({ antialias: true });
+    const imageCamera = new THREE.PerspectiveCamera( 75, window.innerWidth*(1.-screen_split_ratio2) / window.innerHeight, 0.1, 1000 );
+    const imageControls = new OrbitControls( imageCamera, imageRenderer.domElement );
+
+    imageRenderer.setPixelRatio( window.devicePixelRatio );
+    imageRenderer.setSize( window.innerWidth*(1.-screen_split_ratio2), window.innerHeight );
+    document.body.appendChild( imageRenderer.domElement );
+    imageControls.update();
+
+    imageCamera.position.y = 10;
+
+    const imageScene = new THREE.Scene();
+    imageScene.background = new THREE.Color(0xdddddd);
+
+
+
+    let controllers = new ControllersCollection([],3, scene, dualScene, imageScene, dualMaterial, pointsMaterial);
     let threeObjects = [];
     console.log(controllers);
+
+
 
 
 
@@ -108,7 +134,7 @@ const w = window;
         // calculate pointer position in normalized device coordinates
         // (-1 to +1) for both components
 
-        pointer.x = ( event.clientX / (window.innerWidth*screen_split_ratio) ) * 2 - 1;
+        pointer.x = ( event.clientX / (window.innerWidth*screen_split_ratio1) ) * 2 - 1;
         pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
     }
@@ -177,6 +203,7 @@ const w = window;
         requestAnimationFrame( animate );
         controls.update();
         dualControls.update();
+        imageControls.update();
         render();
 
         renderer.render( scene, camera );
@@ -184,6 +211,7 @@ const w = window;
             labelRenderer.render(scene, camera);
         }
         dualRenderer.render( dualScene, dualCamera );
+        imageRenderer.render( imageScene, imageCamera );
     }
     animate();
 
@@ -283,22 +311,73 @@ const w = window;
 
     embeddingList.addEventListener("change", chooseEmbedding);
 
+    
+
     let displayDualSwitch = document.getElementById("display_dual_switch");
     displayDualSwitch.onchange = function(e){
         if(e.target.checked){
-            screen_split_ratio=0.5;
+            nb_windows+=1;
         }
         else{
-            screen_split_ratio=1.0;
+            nb_windows-=1;
         }
-        toolBar.setScreenSplitRatio(screen_split_ratio);
+
+        if(nb_windows==1){
+            screen_split_ratio1 = 1.;
+            screen_split_ratio2 = 1.;
+        }
+        else if(nb_windows==2 && e.target.checked){
+            screen_split_ratio1 = 0.5;
+            screen_split_ratio2 = 1.;
+        }
+        else if(nb_windows==2){
+            screen_split_ratio1 = 0.5;
+            screen_split_ratio2 = 0.5;
+        }
+        else{
+            screen_split_ratio1 = 1./3.;
+            screen_split_ratio2 = 2./3.;
+        }
+
+        toolBar.setScreenSplitRatio(screen_split_ratio1);
+        onWindowResize();
+    }
+
+
+    let displayImageSwitch = document.getElementById("image_display_switch");
+    displayImageSwitch.onchange = function(e){
+        if(e.target.checked){
+            nb_windows+=1;
+        }
+        else{
+            nb_windows-=1;
+        }
+
+        if(nb_windows==1){
+            screen_split_ratio1 = 1.;
+            screen_split_ratio2 = 1.;
+        }
+        else if(nb_windows==2 && e.target.checked){
+            screen_split_ratio1 = 0.5;
+            screen_split_ratio2 = 0.5;
+        }
+        else if(nb_windows==2){
+            screen_split_ratio1 = 0.5;
+            screen_split_ratio2 = 1.;
+        }
+        else{
+            screen_split_ratio1 = 1./3.;
+            screen_split_ratio2 = 2./3.;
+        }
+        
+        toolBar.setScreenSplitRatio(screen_split_ratio1);
         onWindowResize();
     }
 
     //Debug tools
     let wireframe_switch = document.getElementById("wireframe_switch");
     wireframe_switch.onchange = function(e){
-        material_building.wireframe = e.target.checked;
+        material_building.uniforms.wireframe.value = e.target.checked;
         material_debug.uniforms.wireframe.value = e.target.checked;
         dualMaterial.uniforms.wireframe.value = e.target.checked;
     }
@@ -328,16 +407,19 @@ const w = window;
 
     function onWindowResize() {
 
-        camera.aspect = window.innerWidth*screen_split_ratio / window.innerHeight;
+        camera.aspect = window.innerWidth*screen_split_ratio1 / window.innerHeight;
         camera.updateProjectionMatrix();
 
-        renderer.setSize( window.innerWidth*screen_split_ratio, window.innerHeight );
+        renderer.setSize( window.innerWidth*screen_split_ratio1, window.innerHeight );
 
-        dualCamera.aspect = window.innerWidth*(1.-screen_split_ratio) / window.innerHeight;
+        dualCamera.aspect = window.innerWidth*(screen_split_ratio2-screen_split_ratio1) / window.innerHeight;
         dualCamera.updateProjectionMatrix();
 
-        dualRenderer.setSize( window.innerWidth*(1.-screen_split_ratio), window.innerHeight );
-
+        dualRenderer.setSize( window.innerWidth*(screen_split_ratio2-screen_split_ratio1), window.innerHeight );
+        
+        imageCamera.aspect = window.innerWidth*(1.-screen_split_ratio2) / window.innerHeight;
+        imageCamera.updateProjectionMatrix();
+        imageRenderer.setSize( window.innerWidth*(1.-screen_split_ratio2), window.innerHeight );
     }
     window.addEventListener( 'resize', onWindowResize );
 
@@ -346,6 +428,10 @@ const w = window;
         controls.target.copy(newCenter);
         controls.update();
         camera.position.copy(newPos);
+
+        imageControls.target.copy(newCenter);
+        imageControls.update();
+        imageCamera.position.copy(newPos);
 
 
         pLight1.position.set( newCenter.x+50*dist_sun, newCenter.y+50*dist_sun, newCenter.z+50*dist_sun );  
