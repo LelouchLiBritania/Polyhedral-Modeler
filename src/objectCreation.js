@@ -455,6 +455,39 @@ let pyramid_withVertToRemove = {
 }
 
 
+//example for demo
+
+let demo_ex = {
+    'points':[
+        [-10, 0  ,0 ],//0
+        [15 , 0  ,0 ],//1
+        [15 ,-12 ,0 ],//2
+        [7  ,-20 ,0 ],//3
+        [-10,-20 ,0 ],//4
+        [-4 ,-6  ,10],//5
+        [9  ,-6  ,10],//6
+        [9  ,-12 ,10],//7
+        [7  ,-14 ,10],//8
+        [-4 ,-14 ,10] //9
+    ],
+    'faces':[
+        [[0,1,2,3,4],[]],
+        [[1,0,5,6],[]],
+        [[2,1,6,7],[]],
+        [[3,2,7,8],[]],
+        [[4,3,8,9],[]],
+        [[0,4,9,5],[]],
+        [[9,8,7,6,5],[]]
+    ]
+}
+
+let demo_example = {
+    'buildingParts':[
+        demo_ex
+    ]
+}
+
+
 let mock_builds = {"Pyramid":[pyramid], 
                   "TPyramid":[truncated_pyramide],
                   "LHouse":[house_L_shape],
@@ -465,6 +498,7 @@ let mock_builds = {"Pyramid":[pyramid],
                   "pyramid_noised":[pyramid_noised],
                   "house_underconstrained":[house_underconstrained],
                   "double_triangle":[double_triangle],
-                  "pyramid_VertToRemove":[pyramid_withVertToRemove]
+                  "pyramid_VertToRemove":[pyramid_withVertToRemove],
+                  "demo_example":[demo_example]
                 };
 export {mock_builds}

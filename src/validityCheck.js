@@ -218,6 +218,7 @@ function isTopologicallyValid(geometricalController){
     //Check that all the faces adjacent to a point intersects in one only point
     if(valid){
         let error_point_id = 0;
+        let rank;
         for(let i=0; i<geometricalController.pointData.count; i++){
             let faces = geometricalController.findAdjacentFaces(i);
             let values = [];
@@ -229,7 +230,7 @@ function isTopologicallyValid(geometricalController){
                 values.push([...geometricalController.edgeData.supportPlanEquation[e]]);
             });
             let M = new ExactMatrix(values);
-            let rank = M.rank();
+            rank = M.rank();
             valid = rank==3;
             if(!valid){
                 error_point_id = i;

@@ -209,7 +209,14 @@ class EdgeData{
     copy(){
         let copy = new EdgeData([...this.heIndex]);
         for (let i=0; i<this.count; i++){
-            copy.embeddedPlanEquation[i]=[...this.embeddedPlanEquation[i]];
+            //console.log(this.embeddedPlanEquation[i]);
+            try{
+                copy.embeddedPlanEquation[i]=[...this.embeddedPlanEquation[i]];
+            }
+            catch(e){
+                console.log(this.embeddedPlanEquation[i]);
+                console.error(e);
+            }
             copy.underconstrained[i] = this.underconstrained[i];
         }
         for (let i=0; i<this.count; i++){

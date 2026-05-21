@@ -22,7 +22,7 @@ let funcTests = [];
 let performanceTests = [];
 
 let test_file = "data_test/marseille_periurbain.json";
-let do_perf_tests = true;
+let do_perf_tests = false;
 
 function runTests(){
     tests.forEach(test=>{

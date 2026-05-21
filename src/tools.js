@@ -335,11 +335,11 @@ class ShiftTool extends Tool{
 
                 //this.geometricalController.updateScene();
 
-                this.verticesPPT.push(projectedPoint[0].toNumber(), projectedPoint[1].toNumber(), projectedPoint[2].toNumber());
+                //this.verticesPPT.push(projectedPoint[0].toNumber(), projectedPoint[1].toNumber(), projectedPoint[2].toNumber());
 
-                this.geometryPPT.setAttribute( 'position', new THREE.Float32BufferAttribute( this.verticesPPT, 3 ) );
+                //this.geometryPPT.setAttribute( 'position', new THREE.Float32BufferAttribute( this.verticesPPT, 3 ) );
                 
-                this.geometryPPT.getAttribute("position").needsUpdate = true;
+                //this.geometryPPT.getAttribute("position").needsUpdate = true;
                 
                 //console.log("before recompute face points");
                 this.recomputeFacePoints();
