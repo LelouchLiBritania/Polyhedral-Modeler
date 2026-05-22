@@ -26,31 +26,9 @@ npx vite
 
 
 
-## Tools
+## Documentation
 
-Two tools are proposed in this modeler : 
-
-- ![](./static/img/icones_toolbox/icone_shift.png) The **Face-Shift**, which move a face along its normal.
-- ![](./static/img/icones_toolbox/icone_flip_edge.png) The **Edge-Flip**, which changes the faces adjacent to an edge.
-
-## Other Features
-
-Other features are proposed in addition :
-
-- ![](./static/img/icones_toolbox/icone_navig.png) The **navigation** mode, to navigate in the scene.
-- ![icone_select_object](./static/img/icones_toolbox/icone_select_object.png) The **selection** mode, to select a new mesh to modify.
-  
-
-
-
-
-
-## Automatic processes
-
-
-
-
-
+The user documentation is available [here](./Documentation.md)
 
 
 
