@@ -74,9 +74,7 @@ Other features are proposed in addition :
 
 
 
-
-
-<img src="./img/IGN2.png" style="zoom:50%;" /> <img src="./img/lastig.png" alt=" " style="zoom:10%;" /> <img src="./img/Logo_Université_Gustave_Eiffel.png" alt=" " style="zoom:25%;" />
+<img src="./img/IGN2.png" height="100" /> <img src="./img/lastig.png" alt=" " height="100" /> <img src="./img/Logo_Université_Gustave_Eiffel.png" alt=" " height="100" />
 
 
 
