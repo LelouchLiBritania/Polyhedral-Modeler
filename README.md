@@ -39,7 +39,7 @@ Other features are proposed in addition :
 
 - ![](./static/img/icones_toolbox/icone_navig.png) The **navigation** mode, to navigate in the scene.
 - ![icone_select_object](./static/img/icones_toolbox/icone_select_object.png) The **selection** mode, to select a new mesh to modify.
-- 
+  
 
 
 
