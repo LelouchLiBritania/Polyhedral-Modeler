@@ -50,7 +50,7 @@ The user documentation is available [here](./Documentation.md)
 
 ## If you use this code or part of this code in scientific work, please cite our two articles
 
-```latex
+```bibtex
 @inproceedings{10.1145/3746237.3746298,
     author = {Geniet, Florent and Vallet, Bruno and Bredif, Mathieu},
     title = {Exact Computation for Robust 3D Polyhedral Interactive Modeling},
